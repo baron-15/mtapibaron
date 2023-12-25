@@ -1,0 +1,85 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    
+}
+
+.train {
+    background-color: black;
+    display: grid;
+    row-gap: 20px;
+    color: white;
+    padding: 20px;
+    font-size: 3.25em;
+}
+
+.trainrow {
+    display: grid;
+    grid-template-columns: 3rem 5rem auto 20%;
+    padding-left: 10px;
+    padding-right: 10px;
+    align-items: center;
+    column-gap: 20px;
+    
+}
+
+.trainrow > .route{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    min-width: 1em;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+
+.trainrow > .route:before{
+    content:'';
+    float: left;
+    width: auto;
+    padding-bottom: 100%;
+}
+
+
+.trairow > .terminal{
+    text-align: left;
+}
+
+.trainrow > .eta{
+    text-align: right;
+}
+
+#datetime {
+    font-size: 1em;
+}
+
+.arrivalyellow {
+    color: #FFF57A;
+}
+
+.blink {
+    -webkit-animation: blink 3s infinite both;
+            animation: blink 3s infinite both;
+}
+
+@-webkit-keyframes blink {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
+@keyframes blink {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
