@@ -1,26 +1,54 @@
 const stationId = 640;
-const mtaRoute0 = document.getElementById('route0');
-const mtaTerminal0 = document.getElementById('terminal0');
-const mtaEta0 = document.getElementById('eta0');
-const mtaRoute1 = document.getElementById('route1');
-const mtaTerminal1 = document.getElementById('terminal1');
-const mtaEta1 = document.getElementById('eta1');
+const trainCount = 2;
 
 async function loadSomeDisplay (stationId) {
     // const API_URL = `http://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
     const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
     await fetch(API_URL)
     .then(response => response.json())
-    .then(responseJson => {
-        
-        mtaRoute0.innerHTML = responseJson.data[0].alltrains[0].route;
+    .then(responseJson => {  
+        const mtaRouteText0 = document.getElementById('routeText0');
+        const mtaTerminal0 = document.getElementById('terminal0');
+        const mtaEta0 = document.getElementById('eta0');
+        const mtaRouteText1 = document.getElementById('routeText1');
+        const mtaTerminal1 = document.getElementById('terminal1');
+        const mtaEta1 = document.getElementById('eta1');
+        mtaRouteText0.innerHTML = responseJson.data[0].alltrains[0].route.charAt(0);
         mtaTerminal0.innerHTML = responseJson.data[0].alltrains[0].terminalName;
         mtaEta0.innerHTML = responseJson.data[0].alltrains[0].eta;
         mtaEta0.innerHTML += ' min';
-        mtaRoute1.innerHTML = responseJson.data[0].alltrains[1].route;
+        mtaRouteText1.innerHTML = responseJson.data[0].alltrains[1].route.charAt(0);
         mtaTerminal1.innerHTML = responseJson.data[0].alltrains[1].terminalName;
         mtaEta1.innerHTML = responseJson.data[0].alltrains[1].eta;
         mtaEta1.innerHTML += ' min';
+        //for future use to display exp box
+        var svc0 = responseJson.data[0].alltrains[0].service;
+        var svc1 = responseJson.data[0].alltrains[1].service;
+        //to decide if we need a diamond later
+        const mtaRoute0 = document.getElementById('route0');
+        const mtaRoute1 = document.getElementById('route1');
+        if (responseJson.data[0].alltrains[0].route.slice(-1) == "X")
+        {
+            mtaRoute0.classList.remove('circle');
+            mtaRoute0.classList.add('diamond');
+        }
+        else
+        {
+            mtaRoute0.classList.remove('diamond');
+            mtaRoute0.classList.add('circle');
+        }
+
+        if (responseJson.data[0].alltrains[1].route.slice(-1) == "X")
+        {
+            mtaRoute1.classList.remove('circle');
+            mtaRoute1.classList.add('diamond');
+        }
+        else
+        {
+            mtaRoute1.classList.remove('diamond');
+            mtaRoute1.classList.add('circle');
+        }
+
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
         const currentDateTimeET = currentDate.toLocaleString('en-US', options);     
@@ -63,8 +91,8 @@ function arrivalUpdate () {
     let trainrowElements = document.querySelectorAll('.trainrow');
     trainrowElements.forEach(function(trainrowElement) {
         let routeElement = trainrowElement.querySelector('.route');
-        var routeValue = routeElement.innerText; 
-        
+        let routeValue = routeElement.innerText.charAt(0); 
+
         const routeBackgroundColors = {
             A: '#0039a6',
             C: '#0039a6',

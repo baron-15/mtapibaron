@@ -1,4 +1,5 @@
-import urllib, contextlib, copy, datetime
+import urllib, contextlib, copy, datetime as dt
+from datetime import time
 from collections import defaultdict
 from itertools import islice
 from operator import itemgetter
@@ -15,8 +16,8 @@ def distance(p1, p2):
     return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
 def timeDifference(time_str1, time_str2, format='%Y-%m-%d %H:%M:%S%z'):
-    time1 = datetime.datetime.strptime(str(time_str1), format)
-    time2 = datetime.datetime.strptime(str(time_str2), format)
+    time1 = dt.datetime.strptime(str(time_str1), format)
+    time2 = dt.datetime.strptime(str(time_str2), format)
     time_difference = time2 - time1
     seconds_difference = time_difference.total_seconds()
     minutes_difference = int(seconds_difference // 60)
@@ -28,6 +29,13 @@ def timeDifference(time_str1, time_str2, format='%Y-%m-%d %H:%M:%S%z'):
         return "ERR"
     else:
         return minutes_difference
+    
+def isLateNight(time_str1, begin_time = time(0,0), end_time = time(6,0),format='%Y-%m-%d %H:%M:%S%z'):
+    time = dt.datetime.strptime(str(time_str1), format)
+    if begin_time < end_time:
+        return time_str1 >= begin_time and time_str1 <= end_time
+    else: # crosses midnight
+        return time_str1 >= begin_time or time_str1 <= end_time
 
 class Mtapi(object):
 
@@ -45,14 +53,24 @@ class Mtapi(object):
         def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time):
             etaTime = timeDifference(feed_time, train_time)
             try:
-                terminal_name = stopJSON[terminal_id[:3]]['name']
+                terminal_name = stopJSON[terminal_id[:3]]['stop_name']
             except:
                 terminal_name = "ERR"
-            
+
+            expressDiamondChars = ["X"]
+            expressNonDiamondChars = ["2", "3", "4", "5", "B", "D", "N", "Q"]
+            skipStopChars = ["J", "Z"]
+            service = "local"
+            if route_id[-1] in expressDiamondChars:
+                service = "expressDiamond"
+            elif route_id[-1] in expressNonDiamondChars:
+                service = "express"
+
             self.routes.add(route_id)
             self.trains[direction].append({
                 'route': route_id,
                 'direction': direction,
+                'service': service,
                 'time': train_time,
                 'trip': trip_id,
                 'eta': etaTime,
@@ -162,7 +180,7 @@ class Mtapi(object):
 
     def _update(self):
         logger.info('updating...')
-        self._last_update = datetime.datetime.now(TZ)
+        self._last_update = dt.datetime.now(TZ)
 
         # create working copy for thread safety
         stations = copy.deepcopy(self._stations)
@@ -179,7 +197,7 @@ class Mtapi(object):
             if not mta_data:
                 continue
 
-            max_time = self._last_update + datetime.timedelta(minutes = self._MAX_MINUTES)
+            max_time = self._last_update + dt.timedelta(minutes = self._MAX_MINUTES)
 
             for entity in mta_data.entity:
                 trip = Trip(entity)
@@ -266,7 +284,7 @@ class Mtapi(object):
         if self._THREADED and self.threader and self.threader.restart_if_dead():
             return False
         elif self._EXPIRES_SECONDS:
-            age = datetime.datetime.now(TZ) - self._last_update
+            age = dt.datetime.now(TZ) - self._last_update
             return age.total_seconds() > self._EXPIRES_SECONDS
         else:
             return False

@@ -1,0 +1,2 @@
+stations: use the stops and transfers.txt under https://new.mta.info/developers under regular GTFS (a zip file)
+stationsv2: http://web.mta.info/developers/developer-data-terms.html#data
