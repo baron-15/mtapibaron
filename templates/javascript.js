@@ -1,12 +1,16 @@
-var stationId = 640;
-var previousStationId = 640;
+var stationId = '640';
+var previousStationId = '640';
 var errorCount = 0;
 const trainCount = 2;
 
 
 async function loadSomeDisplay (stationId) {
-    // const API_URL = `http://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
-    const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
+    const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
+    if ((stationId.length > 3) || (isNaN(stationId[1])) || (isNaN(stationId[2])))
+    {
+        console.log(stationId, 'did not pass the eye test.');
+    }
+    // const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
     await fetch(API_URL)
     .then(response => response.json())
     .then(responseJson => {  
@@ -67,7 +71,6 @@ function runJobOnce() {
         console.log("Too many errors. Abort. Delaying for 15s.");
         setTimeout(() => {}, "15000");
         throw new Error("Something went wrong repeatedly.");
-
     }
     let userEntry = document.getElementById("stopIdEntry");
     if (userEntry) {

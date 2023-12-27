@@ -23,7 +23,7 @@ body {
     display: grid;
     grid-template-columns: 3vw 6vw auto 10vw;
     grid-template-rows: 6vw;
-    padding-top: 0vw;
+    padding-top: 0.25vw;
     padding-left: 1vw;
     padding-right: 1vw;
     padding-bottom: 1vw;
