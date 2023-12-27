@@ -1,5 +1,8 @@
-const stationId = 640;
+var stationId = 640;
+var previousStationId = 640;
+var errorCount = 0;
 const trainCount = 2;
+
 
 async function loadSomeDisplay (stationId) {
     // const API_URL = `http://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
@@ -52,21 +55,35 @@ async function loadSomeDisplay (stationId) {
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
         const currentDateTimeET = currentDate.toLocaleString('en-US', options);     
-        document.querySelector('#datetime').textContent = 'Station: ' + responseJson.data[0].name + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time in Eastern Time: ' + currentDateTimeET;
+        document.querySelector('#datetime').textContent = 'ID: ' + stationId + ' ...Station: ' + responseJson.data[0].name + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time in Eastern Time: ' + currentDateTimeET;
     })
 }
 
-loadSomeDisplay(stationId).then(
-    testBlinking => arrivalUpdate()).then(testColoring => routeUpdate()).catch((err) => {
-    console.error(err)
-    });
-
-setInterval(function () {
+function runJobOnce() {
     loadSomeDisplay(stationId).then(
-    testBlinking => arrivalUpdate()).then(testColoring => routeUpdate()).catch((err) => {
+        testBlinking => arrivalUpdate()).then(testColoring => routeUpdate()).catch((err) => {
     console.error(err)
+    errorCount += 1;
+    if (errorCount >= 20) {
+        throw error;
+    }
+    let userEntry = document.getElementById("stopIdEntry");
+    if (userEntry) {
+        userEntry.placeholder = `Invalid station: ${stationId}`;
+    }
+    stationId = previousStationId;
+    runJobOnce();
     });
-}, 15000);
+}
+
+function runJob() {
+    runJobOnce();
+    setInterval(function () {
+        runJobOnce();
+    }, 15000);
+}
+
+runJob();
 
 function arrivalUpdate () {
     let trainrowElements = document.querySelectorAll('.trainrow');
@@ -85,48 +102,64 @@ function arrivalUpdate () {
         }
     })
 
+}
+
+function routeUpdate () {
+let trainrowElements = document.querySelectorAll('.trainrow');
+trainrowElements.forEach(function(trainrowElement) {
+    let routeElement = trainrowElement.querySelector('.route');
+    let routeValue = routeElement.innerText.charAt(0); 
+
+    const routeBackgroundColors = {
+        A: '#0039a6',
+        C: '#0039a6',
+        E: '#0039a6',
+        B: '#FF6319',
+        D: '#FF6319',
+        F: '#FF6319',
+        M: '#FF6319',
+        G: '#6CBE45',
+        J: '#996633',
+        Z: '#996633',
+        L: '#A7A9AC',
+        N: '#FCCC0A',
+        Q: '#FCCC0A',
+        R: '#FCCC0A',
+        W: '#FCCC0A',
+        S: '#808183',
+        1: '#EE352E',
+        2: '#EE352E',
+        3: '#EE352E',
+        4: '#00933C',
+        5: '#00933C',
+        6: '#00933C',
+        7: '#B933AD'
+    }
+    let routeBackgroundColor = routeBackgroundColors[routeValue];
+    let routeTextColor = '#ffffff';
+    if (routeValue === 'N' || routeValue === 'Q' || routeValue === 'R' || routeValue === 'W')
+    {
+        routeTextColor = '#000000'
     }
 
-    function routeUpdate () {
-    let trainrowElements = document.querySelectorAll('.trainrow');
-    trainrowElements.forEach(function(trainrowElement) {
-        let routeElement = trainrowElement.querySelector('.route');
-        let routeValue = routeElement.innerText.charAt(0); 
-
-        const routeBackgroundColors = {
-            A: '#0039a6',
-            C: '#0039a6',
-            E: '#0039a6',
-            B: '#FF6319',
-            D: '#FF6319',
-            F: '#FF6319',
-            M: '#FF6319',
-            G: '#6CBE45',
-            J: '#996633',
-            Z: '#996633',
-            L: '#A7A9AC',
-            N: '#FCCC0A',
-            Q: '#FCCC0A',
-            R: '#FCCC0A',
-            W: '#FCCC0A',
-            S: '#808183',
-            1: '#EE352E',
-            2: '#EE352E',
-            3: '#EE352E',
-            4: '#00933C',
-            5: '#00933C',
-            6: '#00933C',
-            7: '#B933AD'
-        }
-        let routeBackgroundColor = routeBackgroundColors[routeValue];
-        let routeTextColor = '#ffffff';
-        if (routeValue === 'N' || routeValue === 'Q' || routeValue === 'R' || routeValue === 'W')
-        {
-            routeTextColor = '#000000'
-        }
-
-        console.log("The route value is ", routeValue, ", background is: ",routeBackgroundColors[routeValue],", text is: ", routeTextColor);
-        routeElement.style.backgroundColor = `${routeBackgroundColor}`;
-        routeElement.style.color = `${routeTextColor}`;
+    console.log("The route value is ", routeValue, ", background is: ",routeBackgroundColors[routeValue],", text is: ", routeTextColor);
+    routeElement.style.backgroundColor = `${routeBackgroundColor}`;
+    routeElement.style.color = `${routeTextColor}`;
     })
 }
+
+let stopForm = document.getElementById("stopIdForm");
+stopForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  let userEntry = document.getElementById("stopIdEntry");
+  if (userEntry.value == '') {
+    alert("Ensure you input a value");
+  }
+  else {
+    console.log("User entry: ", userEntry.value);
+    previousStationId = stationId;
+    stationId = userEntry.value;
+  }
+  userEntry.value = "";
+  runJob();
+});

@@ -1,39 +1,39 @@
-# Given stations.csv, creates a stops.json without stop groupings to allow more accurate lookup of stop name.
-
-import argparse, csv, json, sys
-from hashlib import md5
-
-ID_LENGTH = 4
-
-def main():
-    parser = argparse.ArgumentParser(description='Generate stations JSON file for MtaSanitize server.')
-    parser.add_argument('stations_file', default='stops.json')
-    args = parser.parse_args()
-
-    # do not group stations by parent_id
-    stations = {}
-    with open(args.stations_file, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-                stations[row['stop_id']] = {
-                    'id': row['stop_id'],
-                    'name': set([row['name']]),
-                    'stops': {
-                        row['stop_id']: [float(row['lat']), float(row['lon'])]
-                    }
-                }
-
-    # concatenate names and average lat/lng's
-    for id, station in stations.items():
-        station['name'] = ' / '.join(station['name'])
-        station['location'] = [
-            sum(v[0] for v in station['stops'].values()) / float(len(station['stops'])),
-            sum(v[1] for v in station['stops'].values()) / float(len(station['stops']))
-        ]
-        stations[id] = station
-
-    json.dump(stations, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
-
-
-if __name__ == '__main__':
-    main()
+import csv
+import json
+ 
+# https://www.geeksforgeeks.org/convert-csv-to-json-using-python/
+# Author: khushali_verma
+# Function to convert a CSV to JSON
+# Takes the file paths as arguments
+def make_json(csvFilePath, jsonFilePath):
+     
+    # create a dictionary
+    data = {}
+     
+    # Open a csv reader called DictReader
+    with open(csvFilePath, encoding='utf-8') as csvf:
+        csvReader = csv.DictReader(csvf)
+         
+        # Convert each row into a dictionary 
+        # and add it to data
+        for rows in csvReader:
+             
+            # Assuming a column named 'No' to
+            # be the primary key
+            key = rows['stop_id']
+            data[key] = rows
+ 
+    # Open a json writer, and use the json.dumps() 
+    # function to dump data
+    with open(jsonFilePath, 'w', encoding='utf-8') as jsonf:
+        jsonf.write(json.dumps(data, indent=4))
+         
+# Driver Code
+ 
+# Decide the two file paths according to your 
+# computer system
+csvFilePath = r'stations.csv'
+jsonFilePath = r'stations_retired.json'
+ 
+# Call the make_json function
+make_json(csvFilePath, jsonFilePath)
