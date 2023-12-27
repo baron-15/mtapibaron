@@ -10,7 +10,8 @@
         <link rel="manifest" href="manifest.json" />
     </head>
     <body>
-        <div class="train">
+        <div class="train" id="trainBlock">
+            <!--
             <div class="trainrow">
                 <div class="num" id="num0">1.</div>    
                 <div class="route" id="route0">
@@ -27,16 +28,37 @@
                 <div class="terminal" id="terminal1">,</div>
                 <div class="eta" id="eta1">,</div>
             </div>
+            -->
         </div>
         <div class = "footer">
-            <form action="" id="stopIdForm">
-                <div>
-                    <b>Enter your station's stop ID: </b>
-                    <input type="text" id="stopIdEntry" placeholder="640, 127, 228, 631...">
-                    <button type="submit">Submit</button>
-                    <span>Use <b>parent_id</b> in <a href = "https://github.com/baron-15/MTAPI/blob/master/scripts/stations.csv"  target="_blank" rel="noopener noreferrer"> this csv</a></span>
-                </div>
-            </form>
+            <div class = "forms">
+                <form action="" id="stopIdForm">
+                    <span>
+                        Use <b>parent_id</b> in 
+                        <a href = "https://github.com/baron-15/MTAPI/blob/master/scripts/stations.csv"  target="_blank" rel="noopener noreferrer"> this csv</a>.
+                    </span>
+                    <b> Enter your station's stop ID: </b>
+                        <input type="text" id="stopIdEntry"  maxlength="3" size="9" placeholder="127, 228..." >
+                        <!-- <button type="submit">Submit</button> -->
+                        
+                </form>
+                <span>
+                    <label for="selectNumber">Select the number of trains in display:</label>
+                        <select id="noOfTrainsEntry" onchange="runJobOnce()">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                    </select>
+                </span>
+            </div>
+
             <div class="misc" id="datetime">Time is coming</div>
         </div>
         <script src="javascript.js"></script>

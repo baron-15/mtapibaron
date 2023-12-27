@@ -2,19 +2,81 @@ var stationId = '640';
 var previousStationId = '640';
 var errorCount = 0;
 const trainCount = 2;
-
+var selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
 
 async function loadSomeDisplay (stationId) {
-    const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
-    //const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
+    //const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
+    const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
     if ((stationId.length > 3) || (isNaN(stationId[1])) || (isNaN(stationId[2])))
     {
         console.log(stationId, 'did not pass the eye test.');
+        throw new Error("It did not pass the eye test.");
     }
     
     await fetch(API_URL)
     .then(response => response.json())
     .then(responseJson => {
+        selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
+        let noOfTrains = Object.keys(responseJson.data[0].alltrains).length;
+        document.getElementById("trainBlock").innerHTML = "";
+        for (let k = 1; k <= selectedNumber; k++) {
+            let trainrowDiv = document.createElement("div");
+            trainrowDiv.className = "trainrow";
+            trainrowDiv.id = "trainrow" + k;
+
+            let numDiv = document.createElement("div");
+            numDiv.className = "num";
+            numDiv.id = "num" + k;
+            numDiv.innerHTML = k +":";
+
+            let routeDiv = document.createElement("div");
+            routeDiv.className = "route";
+            routeDiv.id = "route" + k;
+
+            let routeTextDiv = document.createElement("div");
+            routeTextDiv.className = "routeText";
+            routeTextDiv.id = "routeText" + k;
+
+            routeDiv.appendChild(routeTextDiv);
+
+            let terminalDiv = document.createElement("div");
+            terminalDiv.className = "terminal";
+            terminalDiv.id = "terminal" + k;
+
+            let etaDiv = document.createElement("div");
+            etaDiv.className = "eta";
+            etaDiv.id = "eta" + k;
+
+            trainrowDiv.appendChild(numDiv);
+            trainrowDiv.appendChild(routeDiv);
+            trainrowDiv.appendChild(terminalDiv);
+            trainrowDiv.appendChild(etaDiv);
+            document.getElementById("trainBlock").appendChild(trainrowDiv);
+
+            if (noOfTrains >= k) {
+                routeTextDiv.innerHTML = responseJson.data[0].alltrains[k - 1].route.charAt(0);
+                terminalDiv.innerHTML = responseJson.data[0].alltrains[k - 1].terminalName;
+                etaDiv.innerHTML = responseJson.data[0].alltrains[k - 1].eta;
+                etaDiv.innerHTML += ' min';
+                if (responseJson.data[0].alltrains[k-1].route.slice(-1) == "X")
+                {
+                    routeDiv.classList.remove('circle');
+                    routeDiv.classList.add('diamond');
+                }
+                else
+                {
+                    routeDiv.classList.remove('diamond');
+                    routeDiv.classList.add('circle');
+                }
+            }
+
+            else {
+                    routeTextDiv.innerHTML = "";
+                    terminalDiv.innerHTML = "No scheduled";
+                    etaDiv.innerHTML = "";
+                }
+        }
+        /*
         const mtaRouteText0 = document.getElementById('routeText0');
         const mtaTerminal0 = document.getElementById('terminal0');
         const mtaEta0 = document.getElementById('eta0');
@@ -69,38 +131,45 @@ async function loadSomeDisplay (stationId) {
             mtaTerminal1.innerHTML = "No upcoming train";
             mtaEta1.innerHTML = "";
         }
-
-        //to decide if we need a diamond later
+        */
+        previousStationId = stationId;
+        userEntry.value = "";
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
         const currentDateTimeET = currentDate.toLocaleString('en-US', options);     
         document.querySelector('#datetime').textContent = 'ID: ' + stationId + ' ...Station: ' + responseJson.data[0].name + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time in Eastern Time: ' + currentDateTimeET;
     })
-    .catch(err => console.log("Failed at formatting API data. ", err.message))
 }
 
 function runJobOnce() {
+    console.log("Running job");
     loadSomeDisplay(stationId).then(
         testBlinking => arrivalUpdate()).then(testColoring => routeUpdate()).catch((err) => {
     errorCount += 1;
-    console.log("One error!");
+    console.log("One error! " + err + " for station " + stationId );
     if (errorCount >= 20) {
         console.log("Too many errors. Abort. Delaying for 15s.");
-        setTimeout(() => {console.log("Time out");}, 15000);
+        setTimeout(() => {console.log("Time out");}, 20000);
         throw new Error("Something went wrong repeatedly.");
     }
     let userEntry = document.getElementById("stopIdEntry");
-    if (userEntry) {
-        userEntry.placeholder = `Error occured: ${stationId}`;
+
+    // added the stationId != previousId as hover away and submit enter may trigger two actions
+    // which may cause invalid display to be incorrect
+    if ((userEntry) && (stationId != previousStationId)) { 
+        userEntry.placeholder = `${stationId} invalid`;
+        userEntry.value = "";
     }
     stationId = previousStationId;
-    setTimeout(() => {runJobOnce();}, 2000);
+    runJobOnce();
+    return false;
     });
 }
 
 function runJob() {
     runJobOnce();
     var intervalId = setInterval(function () {
+        console.log("Running job from interval.");
         runJobOnce();
     }, 15000);
 }
@@ -172,19 +241,26 @@ function routeUpdate () {
     })
 }
 
-let stopForm = document.getElementById("stopIdForm");
+var stopForm = document.getElementById("stopIdForm");
+var userEntry = document.getElementById("stopIdEntry");
 stopForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  let userEntry = document.getElementById("stopIdEntry");
-  if (userEntry.value == '') {
-    alert("Ensure you input a value");
-  }
-  else {
-    console.log("User entry: ", userEntry.value);
-    previousStationId = stationId;
-    stationId = userEntry.value.toUpperCase();
-    userEntry.placeholder = `640, 127, 228, 631...`;
-  }
-  userEntry.value = "";
-  runJobOnce();
+    e.preventDefault();
+    processStopIdEntry(e)
 });
+
+userEntry.addEventListener("change", (e) => {
+    e.preventDefault();
+    processStopIdEntry(e)
+});
+
+function processStopIdEntry(e) {
+    if (userEntry.value == '') {
+        return false;
+    }
+    else {
+        console.log("User entry: ", userEntry.value);
+        stationId = userEntry.value.toUpperCase();
+        runJobOnce();
+        userEntry.placeholder = `640, 127, 228, 631...`;
+    }
+}
