@@ -1,3 +1,6 @@
+# THANKS
+https://www.youtube.com/watch?v=Nle8PcBSXrk and https://certbot.eff.org/instructions?ws=apache&os=debianbuster for HTTPS certificate.
+
 # Running the index.html after running the server
 Trying to create a UI to replicate the MTA realtime arrival screen on New York subway platforms
 

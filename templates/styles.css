@@ -10,6 +10,11 @@ body {
     height: 100vh;
 }
 
+form {
+  padding-top: 2vw;
+  font-size: 2vw;
+}
+
 .train {
     background-color: black;
     display: grid;
@@ -81,8 +86,8 @@ body {
   display: none;
 }
 
-#datetime {
-    font-size: 1vw;
+.misc {
+    font-size: 2vw;
 }
 
 .arrivalyellow {
