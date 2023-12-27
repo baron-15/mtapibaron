@@ -165,6 +165,7 @@ stopForm.addEventListener("submit", (e) => {
     console.log("User entry: ", userEntry.value);
     previousStationId = stationId;
     stationId = userEntry.value;
+    userEntry.placeholder = `640, 127, 228, 631...`;
   }
   userEntry.value = "";
   runJobOnce();

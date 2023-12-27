@@ -8,6 +8,23 @@ body {
     margin: 0;
     width: 100vw;
     height: 100vh;
+    background-color: #111111;
+    color: white;
+}
+
+a:link {
+  color: #ffffff;
+}
+
+a:visited {
+  color: #ffffff;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
 }
 
 form {
@@ -88,6 +105,7 @@ form {
 
 .misc {
     font-size: min(9pt, 2vw);
+    color: #444444;
 }
 
 .arrivalyellow {

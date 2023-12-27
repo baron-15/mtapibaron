@@ -28,13 +28,17 @@
                 <div class="eta" id="eta1">,</div>
             </div>
         </div>
-        <div class="misc" id="datetime">Time is coming</div>
-        <form action="" id="stopIdForm">
-            <div><b>Enter your station's stop ID</b></div>
-            <input type="text" id="stopIdEntry" placeholder="640 is Brooklyn Bridge">
-            <button type="submit">Submit</button>
-        </form>
-        <div class="misc"> Use <b>parent_id</b> in <a href = "https://github.com/baron-15/MTAPI/blob/master/scripts/stations.csv"  target="_blank" rel="noopener noreferrer"> this csv</a></div>
+        <div class = "footer">
+            <form action="" id="stopIdForm">
+                <div>
+                    <b>Enter your station's stop ID: </b>
+                    <input type="text" id="stopIdEntry" placeholder="640 is Brooklyn Bridge">
+                    <button type="submit">Submit</button>
+                    <span>Use <b>parent_id</b> in <a href = "https://github.com/baron-15/MTAPI/blob/master/scripts/stations.csv"  target="_blank" rel="noopener noreferrer"> this csv</a></span>
+                </div>
+            </form>
+            <div class="misc" id="datetime">Time is coming</div>
+        </div>
         <script src="javascript.js"></script>
     </body>
 </html>
