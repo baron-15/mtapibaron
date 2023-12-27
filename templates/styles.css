@@ -12,7 +12,7 @@ body {
 
 form {
   padding-top: 2vw;
-  font-size: 2vw;
+  font-size: min(9pt, 2vw);
 }
 
 .train {
@@ -26,7 +26,7 @@ form {
 
 .trainrow {
     display: grid;
-    grid-template-columns: 3vw 6vw auto 10vw;
+    grid-template-columns: 3vw 6vw auto 16vw;
     grid-template-rows: 6vw;
     padding-top: 0.25vw;
     padding-left: 1vw;
@@ -87,7 +87,7 @@ form {
 }
 
 .misc {
-    font-size: 2vw;
+    font-size: min(9pt, 2vw);
 }
 
 .arrivalyellow {

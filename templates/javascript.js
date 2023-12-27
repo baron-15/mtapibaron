@@ -6,11 +6,12 @@ const trainCount = 2;
 
 async function loadSomeDisplay (stationId) {
     const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
+    //const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
     if ((stationId.length > 3) || (isNaN(stationId[1])) || (isNaN(stationId[2])))
     {
         console.log(stationId, 'did not pass the eye test.');
     }
-    // const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
+    
     await fetch(API_URL)
     .then(response => response.json())
     .then(responseJson => {  
@@ -166,5 +167,5 @@ stopForm.addEventListener("submit", (e) => {
     stationId = userEntry.value;
   }
   userEntry.value = "";
-  runJob();
+  runJobOnce();
 });
