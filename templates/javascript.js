@@ -62,10 +62,12 @@ async function loadSomeDisplay (stationId) {
 function runJobOnce() {
     loadSomeDisplay(stationId).then(
         testBlinking => arrivalUpdate()).then(testColoring => routeUpdate()).catch((err) => {
-    console.error(err)
     errorCount += 1;
     if (errorCount >= 20) {
-        throw error;
+        console.log("Too many errors. Abort. Delaying for 15s.");
+        setTimeout(() => {}, "15000");
+        throw new Error("Something went wrong repeatedly.");
+
     }
     let userEntry = document.getElementById("stopIdEntry");
     if (userEntry) {
@@ -78,7 +80,7 @@ function runJobOnce() {
 
 function runJob() {
     runJobOnce();
-    setInterval(function () {
+    var intervalId = setInterval(function () {
         runJobOnce();
     }, 15000);
 }
