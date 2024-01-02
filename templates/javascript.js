@@ -1,12 +1,18 @@
 var stationId = '640';
 var previousStationId = '640';
 var errorCount = 0;
-const trainCount = 2;
-var selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
+var selectedNumber = 2;
+
+async function init() {
+    selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
+    return;
+}
+
 
 async function loadSomeDisplay (stationId) {
-    //const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
-    const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
+    console.log("Loading display for stationID ", stationId);
+    const API_URL = `https://mta-api-project.uc.r.appspot.com/by-id/${stationId}`;
+    //const API_URL = `http://127.0.0.1:5000/by-id/${stationId}`;
     if ((stationId.length > 3) || (isNaN(stationId[1])) || (isNaN(stationId[2])))
     {
         console.log(stationId, 'did not pass the eye test.');
@@ -27,7 +33,7 @@ async function loadSomeDisplay (stationId) {
             let numDiv = document.createElement("div");
             numDiv.className = "num";
             numDiv.id = "num" + k;
-            numDiv.innerHTML = k +":";
+            numDiv.innerHTML = k +".";
 
             let routeDiv = document.createElement("div");
             routeDiv.className = "route";
@@ -133,6 +139,7 @@ async function loadSomeDisplay (stationId) {
         }
         */
         previousStationId = stationId;
+        saveUserSettings(stationId, previousStationId, selectedNumber);
         userEntry.value = "";
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
@@ -173,8 +180,6 @@ function runJob() {
         runJobOnce();
     }, 15000);
 }
-
-runJob();
 
 function arrivalUpdate () {
     let trainrowElements = document.querySelectorAll('.trainrow');
@@ -261,6 +266,40 @@ function processStopIdEntry(e) {
         console.log("User entry: ", userEntry.value);
         stationId = userEntry.value.toUpperCase();
         runJobOnce();
+        saveUserSettings(stationId, previousStationId, selectedNumber);
         userEntry.placeholder = `640, 127, 228, 631...`;
     }
 }
+
+function saveUserSettings(cS, pS, sN) {
+    console.log("Saving user settings...");
+    var userSettings = {
+        cookieCurrentStation: cS,
+        cookiePreviousStation: pS,
+        cookieSelectedNo: sN
+    };
+
+    var userSettingsJSON = JSON.stringify(userSettings);
+    document.cookie = 'userSettings=' + encodeURIComponent(userSettingsJSON) + '; expires=' + new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString() + '; path=/';
+}
+
+function getUserSettings() {
+    console.log("Getting user settings...");
+    var cookies = document.cookie.split(';');
+    var userSettingsCookie = cookies.find(cookie => cookie.trim().startsWith('userSettings='));
+
+    if (userSettingsCookie) {
+        var userSettingsJSON = decodeURIComponent(userSettingsCookie.split('=')[1]);
+        var userSettings = JSON.parse(userSettingsJSON);
+        let editSelectedNumber = document.getElementById("noOfTrainsEntry");
+        stationId = userSettings.cookieCurrentStation;
+        previousStationId = userSettings.cookiePreviousStation;
+        selectedNumber = userSettings.cookieSelectedNo;
+        editSelectedNumber.value = selectedNumber;
+        console.log("Cookie found!", stationId, ", ", previousStationId, ", ", selectedNumber);
+    }
+}
+
+
+
+init().then(result => getUserSettings()).then(result2 => runJob());

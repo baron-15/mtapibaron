@@ -51,7 +51,8 @@ class Mtapi(object):
             return self.json[key]
 
         def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time):
-            etaTime = timeDifference(feed_time, train_time)
+            currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
+            etaTime = timeDifference(currentTime, train_time)
             try:
                 terminal_name = stopJSON[terminal_id[:3]]['stop_name']
             except:
