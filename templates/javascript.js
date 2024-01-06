@@ -2,6 +2,7 @@ var stationId = '640';
 var previousStationId = '640';
 var errorCount = 0;
 var selectedNumber = 2;
+var displayStationBlock = 1;
 var routeBackgroundColors = {
     A: '#0039a6',
     C: '#0039a6',
@@ -164,12 +165,12 @@ async function loadSomeDisplay (stationId) {
         }
         */
         previousStationId = stationId;
-        saveUserSettings(stationId, previousStationId, selectedNumber);
+        saveUserSettings(stationId, previousStationId, selectedNumber, displayStationBlock);
         userEntry.value = "";
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
         const currentDateTimeET = currentDate.toLocaleString('en-US', options);
-        document.querySelector('#datetime').textContent = 'ID: ' + stationId + ' ...Station: ' + responseJson.data[0].name + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time in Eastern Time: ' + currentDateTimeET;
+        document.querySelector('#datetime').textContent = 'ID: ' + stationId  + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time: ' + currentDateTimeET + ' ET';
         
         const rawStationName = responseJson.data[0].name;
         const stationNameArr = rawStationName.split("/");
@@ -206,6 +207,13 @@ async function loadSomeDisplay (stationId) {
 
         let noOfRoutes = rawRoutes.length;
         document.getElementById("allRoutes").innerHTML = "";
+
+        if (noOfRoutes > 0) {
+            document.getElementById("allRoutes").style.display = "grid"; 
+          } else {
+            document.getElementById("allRoutes").style.display = "none";
+          }
+          
         for (let k = 1; k <= noOfRoutes; k++) {
             let routeBlock = document.createElement("div");
             routeBlock.className = "route";
@@ -326,12 +334,13 @@ function processStopIdEntry(e) {
     }
 }
 
-function saveUserSettings(cS, pS, sN) {
+function saveUserSettings(cS, pS, sN, sB) {
     console.log("Saving user settings...");
     var userSettings = {
         cookieCurrentStation: cS,
         cookiePreviousStation: pS,
-        cookieSelectedNo: sN
+        cookieSelectedNo: sN,
+        cookieDisplayStationBlock:sB
     };
 
     var userSettingsJSON = JSON.stringify(userSettings);
@@ -350,8 +359,18 @@ function getUserSettings() {
         stationId = userSettings.cookieCurrentStation;
         previousStationId = userSettings.cookiePreviousStation;
         selectedNumber = userSettings.cookieSelectedNo;
+        displayStationBlock = userSettings.cookieDisplayStationBlock;
+        let stationBlock = document.getElementById("stationBlock");
+        let checkbox = document.getElementById("toggleStationBlock");
+        if (displayStationBlock) {
+            stationBlock.style.display = "grid";
+            checkbox.checked = true;
+          } else {
+            stationBlock.style.display = "none";
+            checkbox.checked = false;
+          }
         editSelectedNumber.value = selectedNumber;
-        console.log("Cookie found!", stationId, ", ", previousStationId, ", ", selectedNumber);
+        console.log("Cookie found!", stationId, ", ", previousStationId, ", ", selectedNumber, ",", displayStationBlock);
     }
 }
 
@@ -361,8 +380,10 @@ function toggleStationBlock() {
 
     if (checkbox.checked) {
       stationBlock.style.display = "grid";
+      displayStationBlock = 1;
     } else {
       stationBlock.style.display = "none";
+      displayStationBlock = 0;
     }
   }
 
