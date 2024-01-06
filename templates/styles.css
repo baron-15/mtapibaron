@@ -52,15 +52,54 @@ input, select {
   color: #ffffff;
 }
 
+
+
+#stationName {
+  font-size: 5vw;
+  font-weight: bold;
+  padding-top: 0.25vh;
+  padding-left: 0.75vw;
+  padding-right: 0.75vw;
+  padding-bottom: 0.75vh;
+}
+
+#stationNameAlt {
+  font-size: 3.5vw;
+  font-weight: normal;
+  padding-top: 0.75vh;
+}
+
+#allRoutes {
+  font-size: 3.75vw;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.75vw, 1fr));
+  grid-template-rows: 6vw;
+  gap: 2vw;
+  padding-top: 0.25vh;
+  padding-left: 0.75vw;
+  padding-right: 0.75vw;
+  padding-bottom: 0.9vh;
+}
+
+.block {
+  background-color: black;
+  margin-left: 4vw;
+  margin-right: 4vw;
+  margin-bottom: 10vh;
+  margin-top: 10vh;
+}
+
+.station {
+  display: grid;
+  row-gap: 1vw;
+  color: white;
+  padding: 1.5vw;
+}
+
 .train {
-    background-color: black;
     display: grid;
     row-gap: 1vw;
     color: white;
-    margin-top: 10vh;
-    margin-left: 4vw;
-    margin-right: 4vw;
-    margin-bottom: 10vh;
     padding: 1.5vw;
     font-size: 3.75vw;
 }
@@ -80,7 +119,7 @@ input, select {
     
 }
 
-.trainrow > .route.circle{
+.route.circle{
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -90,14 +129,14 @@ input, select {
     vertical-align: middle;
 }
 
-.trainrow > .route.circle::before{
+.route.circle::before{
     content:'';
     float: left;
     width: auto;
     padding-bottom: 100%;
 }
 
-.trainrow > .route.diamond {
+.route.diamond {
   
   font-weight: bold;
   text-align: center;
@@ -106,7 +145,7 @@ input, select {
   margin: 0;
   aspect-ratio: 1 / 1;
 }
-.trainrow > .route.diamond > .routeText {
+.route.diamond > .routeText {
   display: table-cell;
   transform: rotate(-45deg);
   vertical-align: middle;

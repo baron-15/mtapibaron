@@ -2,6 +2,31 @@ var stationId = '640';
 var previousStationId = '640';
 var errorCount = 0;
 var selectedNumber = 2;
+var routeBackgroundColors = {
+    A: '#0039a6',
+    C: '#0039a6',
+    E: '#0039a6',
+    B: '#FF6319',
+    D: '#FF6319',
+    F: '#FF6319',
+    M: '#FF6319',
+    G: '#6CBE45',
+    J: '#996633',
+    Z: '#996633',
+    L: '#A7A9AC',
+    N: '#FCCC0A',
+    Q: '#FCCC0A',
+    R: '#FCCC0A',
+    W: '#FCCC0A',
+    S: '#808183',
+    1: '#EE352E',
+    2: '#EE352E',
+    3: '#EE352E',
+    4: '#00933C',
+    5: '#00933C',
+    6: '#00933C',
+    7: '#B933AD'
+}
 
 async function init() {
     selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
@@ -143,8 +168,65 @@ async function loadSomeDisplay (stationId) {
         userEntry.value = "";
         const currentDate = new Date();
         const options = { timeZone: 'America/New_York' };
-        const currentDateTimeET = currentDate.toLocaleString('en-US', options);     
+        const currentDateTimeET = currentDate.toLocaleString('en-US', options);
         document.querySelector('#datetime').textContent = 'ID: ' + stationId + ' ...Station: ' + responseJson.data[0].name + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time in Eastern Time: ' + currentDateTimeET;
+        
+        const rawStationName = responseJson.data[0].name;
+        const stationNameArr = rawStationName.split("/");
+        document.querySelector('#stationName').textContent = stationNameArr[0] + ' Station';
+        for (let i = 1; i < stationNameArr.length; i++) {
+            let altNameBlock = document.createElement("div");
+            altNameBlock.id = "stationNameAlt";
+            altNameBlock.innerHTML = stationNameArr[i] + ' Station';
+            document.querySelector('#stationName').appendChild(altNameBlock);
+        }
+
+        let rawRoutes = responseJson.data[0].routes;
+        rawRoutes.sort((a, b) => {
+            // Get the first characters of each string
+            console.log("Sorting");
+            const firstCharA = a.charAt(0);
+            const firstCharB = b.charAt(0);
+          
+            // Check if both first characters are letters
+            const isLetterA = isNaN(firstCharA);
+            const isLetterB = isNaN(firstCharB);
+          
+            // Compare based on the order of letters and then numbers
+            if (isLetterA && isLetterB) {
+              return firstCharA.localeCompare(firstCharB);
+            } else if (isLetterA) {
+              return -1; // A comes before B (letter comes before number)
+            } else if (isLetterB) {
+              return 1; // B comes before A (number comes after letter)
+            } else {
+              return a.localeCompare(b); // Both are numbers, compare as strings
+            }
+          });
+
+        let noOfRoutes = rawRoutes.length;
+        document.getElementById("allRoutes").innerHTML = "";
+        for (let k = 1; k <= noOfRoutes; k++) {
+            let routeBlock = document.createElement("div");
+            routeBlock.className = "route";
+            routeBlock.id = "stationRouteText" + k;
+            let routeTextBlock = document.createElement("div");
+            routeTextBlock.className = "routeText";
+            routeTextBlock.id = "routeText" + k;
+            routeTextBlock.innerHTML = rawRoutes[k - 1];
+            routeBlock.appendChild(routeTextBlock);
+            if (rawRoutes.slice(-1) == "X")
+                {
+                    routeBlock.classList.remove('circle');
+                    routeBlock.classList.add('diamond');
+                }
+                else
+                {
+                    routeBlock.classList.remove('diamond');
+                    routeBlock.classList.add('circle');
+                }
+            document.getElementById("allRoutes").appendChild(routeBlock);
+        }
     })
 }
 
@@ -201,35 +283,9 @@ function arrivalUpdate () {
 }   
 
 function routeUpdate () {
-    let trainrowElements = document.querySelectorAll('.trainrow');
-    trainrowElements.forEach(function(trainrowElement) {
-    let routeElement = trainrowElement.querySelector('.route');
+    let routeElements = document.querySelectorAll('.route');
+    routeElements.forEach(function(routeElement) {
     let routeValue = routeElement.innerText.charAt(0); 
-    const routeBackgroundColors = {
-        A: '#0039a6',
-        C: '#0039a6',
-        E: '#0039a6',
-        B: '#FF6319',
-        D: '#FF6319',
-        F: '#FF6319',
-        M: '#FF6319',
-        G: '#6CBE45',
-        J: '#996633',
-        Z: '#996633',
-        L: '#A7A9AC',
-        N: '#FCCC0A',
-        Q: '#FCCC0A',
-        R: '#FCCC0A',
-        W: '#FCCC0A',
-        S: '#808183',
-        1: '#EE352E',
-        2: '#EE352E',
-        3: '#EE352E',
-        4: '#00933C',
-        5: '#00933C',
-        6: '#00933C',
-        7: '#B933AD'
-    }
     let routeBackgroundColor = routeBackgroundColors[routeValue];
     if (!routeValue) {
         routeBackgroundColor = '#000000';
@@ -239,8 +295,7 @@ function routeUpdate () {
     {
         routeTextColor = '#000000'
     }
-
-    console.log("The route value is ", routeValue, ", background is: ",routeBackgroundColors[routeValue],", text is: ", routeTextColor);
+    
     routeElement.style.backgroundColor = `${routeBackgroundColor}`;
     routeElement.style.color = `${routeTextColor}`;
     })
@@ -300,6 +355,15 @@ function getUserSettings() {
     }
 }
 
+function toggleStationBlock() {
+    let stationBlock = document.getElementById("stationBlock");
+    let checkbox = document.getElementById("toggleStationBlock");
 
+    if (checkbox.checked) {
+      stationBlock.style.display = "grid";
+    } else {
+      stationBlock.style.display = "none";
+    }
+  }
 
 init().then(result => getUserSettings()).then(result2 => runJob());
