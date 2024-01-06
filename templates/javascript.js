@@ -2,7 +2,7 @@ var stationId = '640';
 var previousStationId = '640';
 var errorCount = 0;
 var selectedNumber = 2;
-var displayStationBlock = 1;
+var displayStationBlock = 0;
 var routeBackgroundColors = {
     A: '#0039a6',
     C: '#0039a6',
@@ -183,28 +183,7 @@ async function loadSomeDisplay (stationId) {
         }
 
         let rawRoutes = responseJson.data[0].routes;
-        rawRoutes.sort((a, b) => {
-            // Get the first characters of each string
-            console.log("Sorting");
-            const firstCharA = a.charAt(0);
-            const firstCharB = b.charAt(0);
-          
-            // Check if both first characters are letters
-            const isLetterA = isNaN(firstCharA);
-            const isLetterB = isNaN(firstCharB);
-          
-            // Compare based on the order of letters and then numbers
-            if (isLetterA && isLetterB) {
-              return firstCharA.localeCompare(firstCharB);
-            } else if (isLetterA) {
-              return -1; // A comes before B (letter comes before number)
-            } else if (isLetterB) {
-              return 1; // B comes before A (number comes after letter)
-            } else {
-              return a.localeCompare(b); // Both are numbers, compare as strings
-            }
-          });
-
+        rawRoutes = routeOrderSort(rawRoutes);
         let noOfRoutes = rawRoutes.length;
         document.getElementById("allRoutes").innerHTML = "";
 
@@ -385,6 +364,58 @@ function toggleStationBlock() {
       stationBlock.style.display = "none";
       displayStationBlock = 0;
     }
+    saveUserSettings(stationId, previousStationId, selectedNumber, displayStationBlock);
   }
 
 init().then(result => getUserSettings()).then(result2 => runJob());
+
+// To mock the order of route display based on Times Square (ACENQRWS1237) and Grand Central (4567S) to blend S in middle
+// I had to write two separate sort functions to run based on if a letter other S exists
+// ChatGPT struggled to lump it into one function
+function routeOrderSort(arr) {
+    function customComparator1(a, b) {
+        if (a[0].match(/[A-Za-z]/) && a[0] !== 'S') {
+            if (b[0].match(/[A-Za-z]/) && b[0] !== 'S') {
+                return a.localeCompare(b);
+            } else {
+                return -1;
+            }
+        } else if (a[0] === 'S') {
+            if (b[0] === 'S') {
+                return 0;
+            } else if (b[0].match(/[A-Za-z]/)) {
+                return 1;
+            } else {
+                return -1;
+            }
+        } else if (a[0].match(/\d/)) {
+            if (b[0].match(/\d/)) {
+                return a.localeCompare(b);
+            } else {
+                return 1;
+            }
+        } else if (b[0].match(/\d/)) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+
+    function customComparator2(a, b) {
+        if (a[0].match(/\d/) && b[0].match(/\d/)) {
+            return a.localeCompare(b);
+        } else if (a[0].match(/\d/)) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+
+    if (arr.some(item => item[0].match(/[A-Za-z]/) && item[0] !== 'S')) {
+        return arr.sort(customComparator1);
+    }
+
+    else {
+        return arr.sort(customComparator2);
+    }
+}
