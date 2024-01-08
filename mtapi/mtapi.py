@@ -51,8 +51,9 @@ class Mtapi(object):
             return self.json[key]
 
         def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time):
-            currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
-            etaTime = timeDifference(currentTime, train_time)
+            # currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
+            # etaTime = timeDifference(currentTime, train_time)
+            # etaTime = 1
             try:
                 terminal_name = stopJSON[terminal_id[:3]]['stop_name']
             except:
@@ -68,13 +69,14 @@ class Mtapi(object):
                 service = "express"
 
             self.routes.add(route_id)
+
             self.trains[direction].append({
                 'route': route_id,
                 'direction': direction,
                 'service': service,
                 'time': train_time,
                 'trip': trip_id,
-                'eta': etaTime,
+                #'eta': etaTime,
                 'terminal': terminal_id,
                 'terminalName': terminal_name
             })

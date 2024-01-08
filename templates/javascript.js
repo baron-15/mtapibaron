@@ -48,6 +48,9 @@ async function loadSomeDisplay (stationId) {
     await fetch(API_URL)
     .then(response => response.json())
     .then(responseJson => {
+        let currentDate = new Date();
+        let options = { timeZone: 'America/New_York' };
+        let currentDateTimeET = currentDate.toLocaleString('en-US', options);
         selectedNumber = parseInt(document.getElementById("noOfTrainsEntry").value);
         let noOfTrains = Object.keys(responseJson.data[0].alltrains).length;
         document.getElementById("trainBlock").innerHTML = "";
@@ -88,7 +91,9 @@ async function loadSomeDisplay (stationId) {
             if (noOfTrains >= k) {
                 routeTextDiv.innerHTML = responseJson.data[0].alltrains[k - 1].route.charAt(0);
                 terminalDiv.innerHTML = responseJson.data[0].alltrains[k - 1].terminalName;
-                etaDiv.innerHTML = responseJson.data[0].alltrains[k - 1].eta;
+                let etaString = responseJson.data[0].alltrains[k - 1].time;
+                let eta = new Date(etaString);
+                etaDiv.innerHTML = timeDifference(currentDate, eta);
                 etaDiv.innerHTML += ' min';
                 if (responseJson.data[0].alltrains[k-1].route.slice(-1) == "X")
                 {
@@ -167,13 +172,10 @@ async function loadSomeDisplay (stationId) {
         previousStationId = stationId;
         saveUserSettings(stationId, previousStationId, selectedNumber, displayStationBlock);
         userEntry.value = "";
-        const currentDate = new Date();
-        const options = { timeZone: 'America/New_York' };
-        const currentDateTimeET = currentDate.toLocaleString('en-US', options);
         document.querySelector('#datetime').textContent = 'ID: ' + stationId  + ' ... MTA API Data: ' + responseJson.updated + ' ... Browser Refresh Time: ' + currentDateTimeET + ' ET';
         
         const rawStationName = responseJson.data[0].name;
-        const stationNameArr = rawStationName.split("/");
+        const stationNameArr = rawStationName.split("|");
         document.querySelector('#stationName').textContent = stationNameArr[0] + ' Station';
         for (let i = 1; i < stationNameArr.length; i++) {
             let altNameBlock = document.createElement("div");
@@ -200,9 +202,9 @@ async function loadSomeDisplay (stationId) {
             let routeTextBlock = document.createElement("div");
             routeTextBlock.className = "routeText";
             routeTextBlock.id = "routeText" + k;
-            routeTextBlock.innerHTML = rawRoutes[k - 1];
+            routeTextBlock.innerHTML = rawRoutes[k - 1].charAt(0);
             routeBlock.appendChild(routeTextBlock);
-            if (rawRoutes.slice(-1) == "X")
+            if (rawRoutes[k-1].slice(-1) == "X")
                 {
                     routeBlock.classList.remove('circle');
                     routeBlock.classList.add('diamond');
@@ -225,7 +227,7 @@ function runJobOnce() {
     console.log("One error! " + err + " for station " + stationId );
     if (errorCount >= 20) {
         console.log("Too many errors. Abort. Delaying for 15s.");
-        setTimeout(() => {console.log("Time out");}, 20000);
+        setTimeout(() => {console.log("Time out");}, 15000);
         throw new Error("Something went wrong repeatedly.");
     }
     let userEntry = document.getElementById("stopIdEntry");
@@ -255,7 +257,6 @@ function arrivalUpdate () {
     trainrowElements.forEach(function(trainrowElement) {
         let etaElement = trainrowElement.querySelector('.eta');
         var etaValue = etaElement.innerText; 
-        console.log("The eta value is ", etaValue);
         if (etaValue === '0 min') {
             trainrowElement.classList.add('arrivalyellow');
             etaElement.classList.add('blink');
@@ -367,11 +368,23 @@ function toggleStationBlock() {
     saveUserSettings(stationId, previousStationId, selectedNumber, displayStationBlock);
   }
 
+function loadURLandSetStationId() {
+    /* let currentURL = window.location.href;
+    let pathArray = window.location.pathname.split('/');
+    if (pathArray[-1].length === 3 || pathArray[-1].length === 4) {
+        stationId = pathArray[-1];
+        console.log('Detected custom path: ', stationId);
+        window.location.replace(pathArray[0]);
+    }
+    */
+}
+
 init().then(result => getUserSettings()).then(result2 => runJob());
 
 // To mock the order of route display based on Times Square (ACENQRWS1237) and Grand Central (4567S) to blend S in middle
 // I had to write two separate sort functions to run based on if a letter other S exists
 // ChatGPT struggled to lump it into one function
+// Unretired as it ran slower in Python backend using mtapi.py
 function routeOrderSort(arr) {
     function customComparator1(a, b) {
         if (a[0].match(/[A-Za-z]/) && a[0] !== 'S') {
@@ -411,11 +424,45 @@ function routeOrderSort(arr) {
         }
     }
 
+    function uniqueFirstCharacters(a) {
+        let uniqueChars = new Set();
+        a.forEach(str => {
+          let firstChar = str.charAt(0);
+          uniqueChars.add(firstChar);
+        });
+        return Array.from(uniqueChars);
+    }
+
+    arr = uniqueFirstCharacters(arr);
+
     if (arr.some(item => item[0].match(/[A-Za-z]/) && item[0] !== 'S')) {
         return arr.sort(customComparator1);
     }
 
     else {
         return arr.sort(customComparator2);
+    }
+}
+
+function timeDifference (startTime, endTime) {
+    const timeDifference = endTime.getTime() - startTime.getTime();
+    const minuteDifference = Math.round(timeDifference / (1000 * 60));
+    if (minuteDifference > 99){
+        return "99+";
+    }
+    else if (minuteDifference == -1) {
+        return "0";
+    }
+    else if (minuteDifference <= -2) {
+        let options = { timeZone: 'America/New_York' };
+        let startTimeET = startTime.toLocaleString('en-US', options);
+        let endTimeET = endTime.toLocaleString('en-US', options);
+        console.log("Bad minute difference: ", minuteDifference);
+        console.log("Start time: ", startTimeET);
+        console.log("End time: ", endTimeET);
+        return "ERR";
+    }
+    else {
+        return minuteDifference;
     }
 }

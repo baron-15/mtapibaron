@@ -30,7 +30,7 @@ def main():
 
     # concatenate names and average lat/lng's
     for id, station in stations.items():
-        station['name'] = ' / '.join(station['name'])
+        station['name'] = ' | '.join(station['name'])
         station['location'] = [
             sum(v[0] for v in station['stops'].values()) / float(len(station['stops'])),
             sum(v[1] for v in station['stops'].values()) / float(len(station['stops']))

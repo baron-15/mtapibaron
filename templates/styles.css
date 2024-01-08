@@ -55,7 +55,7 @@ input, select {
 
 
 #stationName {
-  font-size: 5vw;
+  font-size: 6vw;
   font-weight: bold;
   padding-top: 0.25vh;
   padding-left: 0.75vw;
@@ -74,18 +74,18 @@ input, select {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(5.75vw, 1fr));
   grid-template-rows: 6vw;
-  gap: 2vw;
-  padding-top: 0.25vh;
+  gap: 1.5vw;
+  padding-top: 0.5vh;
   padding-left: 0.75vw;
   padding-right: 0.75vw;
-  padding-bottom: 0.9vh;
+  padding-bottom: 1vh;
 }
 
 .block {
   background-color: black;
   margin-left: 4vw;
   margin-right: 4vw;
-  margin-bottom: 10vh;
+  margin-bottom: 9vh;
   margin-top: 10vh;
 }
 

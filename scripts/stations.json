@@ -131,7 +131,7 @@
             40.8406375,
             -73.939847
         ],
-        "name": "168 St / 168 St-Washington Hts",
+        "name": "168 St-Washington Hts | 168 St",
         "stops": {
             "112": [
                 40.840556,
@@ -349,7 +349,7 @@
             40.755746,
             -73.9875808
         ],
-        "name": "42 St-Port Authority Bus Terminal / Times Sq-42 St",
+        "name": "Times Sq-42 St | 42 St-Port Authority Bus Terminal",
         "stops": {
             "127": [
                 40.75529,
@@ -435,7 +435,7 @@
             40.737796333333335,
             -73.997732
         ],
-        "name": "6 Av / 14 St",
+        "name": "14 St | 6 Av",
         "stops": {
             "132": [
                 40.737826,
@@ -555,7 +555,7 @@
             40.702248999999995,
             -74.01309950000001
         ],
-        "name": "South Ferry Loop / Whitehall St-South Ferry",
+        "name": "South Ferry Loop | Whitehall St-South Ferry",
         "stops": {
             "140": [
                 40.701411,
@@ -927,7 +927,7 @@
             40.712603,
             -74.00955149999999
         ],
-        "name": "World Trade Center / Park Place / Cortlandt St / Chambers St",
+        "name": "Chambers St | Cortlandt St | Park Place | World Trade Center",
         "stops": {
             "228": [
                 40.713051,
@@ -1007,7 +1007,7 @@
             40.693241,
             -73.990642
         ],
-        "name": "Court St / Borough Hall",
+        "name": "Court St | Borough Hall",
         "stops": {
             "232": [
                 40.693219,
@@ -1121,7 +1121,7 @@
             40.6705125,
             -73.958688
         ],
-        "name": "Franklin Av-Medgar Evers College / Botanic Garden",
+        "name": "Franklin Av-Medgar Evers College | Botanic Garden",
         "stops": {
             "239": [
                 40.670682,
@@ -1321,7 +1321,7 @@
             40.6637765,
             -73.901509
         ],
-        "name": "Junius St / Livonia Av",
+        "name": "Livonia Av | Junius St",
         "stops": {
             "254": [
                 40.663515,
@@ -2057,7 +2057,7 @@
             40.76327166666666,
             -73.96711266666667
         ],
-        "name": "Lexington Av/63 St / 59 St / Lexington Av/59 St",
+        "name": "Lexington Av/63 St | 59 St | Lexington Av/59 St",
         "stops": {
             "629": [
                 40.762526,
@@ -2079,7 +2079,7 @@
             40.7573295,
             -73.97048749999999
         ],
-        "name": "51 St / Lexington Av/53 St",
+        "name": "51 St | Lexington Av/53 St",
         "stops": {
             "630": [
                 40.757107,
@@ -2197,7 +2197,7 @@
             40.725606,
             -73.9954315
         ],
-        "name": "Broadway-Lafayette St / Bleecker St",
+        "name": "Broadway-Lafayette St | Bleecker St",
         "stops": {
             "637": [
                 40.725915,
@@ -2255,7 +2255,7 @@
             40.713154,
             -74.003766
         ],
-        "name": "Brooklyn Bridge-City Hall / Chambers St",
+        "name": "Brooklyn Bridge-City Hall | Chambers St",
         "stops": {
             "640": [
                 40.713065,
@@ -2371,7 +2371,7 @@
             40.746746,
             -73.891366
         ],
-        "name": "74 St-Broadway / Jackson Hts-Roosevelt Av",
+        "name": "74 St-Broadway | Jackson Hts-Roosevelt Av",
         "stops": {
             "710": [
                 40.746848,
@@ -2491,7 +2491,7 @@
             40.747141,
             -73.945032
         ],
-        "name": "Court Sq-23 St / Court Sq",
+        "name": "Court Sq | Court Sq-23 St",
         "stops": {
             "719": [
                 40.747023,
@@ -2541,7 +2541,7 @@
             40.7540215,
             -73.98326599999999
         ],
-        "name": "5 Av / 42 St-Bryant Pk",
+        "name": "42 St-Bryant Pk | 5 Av",
         "stops": {
             "724": [
                 40.753821,
@@ -2857,7 +2857,7 @@
             40.740335,
             -74.002134
         ],
-        "name": "8 Av / 14 St",
+        "name": "8 Av | 14 St",
         "stops": {
             "A31": [
                 40.740893,
@@ -3357,7 +3357,7 @@
             40.625657000000004,
             -73.996624
         ],
-        "name": "New Utrecht Av / 62 St",
+        "name": "New Utrecht Av | 62 St",
         "stops": {
             "B16": [
                 40.626472,
@@ -4619,7 +4619,7 @@
             40.7134275,
             -73.95084650000001
         ],
-        "name": "Lorimer St / Metropolitan Av",
+        "name": "Lorimer St | Metropolitan Av",
         "stops": {
             "G29": [
                 40.712792,
