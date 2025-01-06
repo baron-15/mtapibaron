@@ -227,7 +227,12 @@ function runJobOnce() {
     console.log("One error! " + err + " for station " + stationId );
     if (errorCount >= 20) {
         console.log("Too many errors. Abort. Delaying for 15s.");
-        setTimeout(() => {console.log("Time out");}, 15000);
+        setTimeout(() => {
+            console.log("Resetting to station 640.");
+            stationId = 640;
+            previousStationId = 640;
+            userEntry.value = "";
+        }, 15000);
         throw new Error("Something went wrong repeatedly.");
     }
     let userEntry = document.getElementById("stopIdEntry");
@@ -287,6 +292,7 @@ function routeUpdate () {
     routeElement.style.backgroundColor = `${routeBackgroundColor}`;
     routeElement.style.color = `${routeTextColor}`;
     })
+    errorCount = 0;
 }
 
 var stopForm = document.getElementById("stopIdForm");

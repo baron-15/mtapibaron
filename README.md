@@ -1,3 +1,6 @@
+# Jan 5th 2025 update
+Hello from Baron! This is just a refresher to myself on how I built this website (and its API)!
+
 # THANKS
 https://www.youtube.com/watch?v=Nle8PcBSXrk and https://certbot.eff.org/instructions?ws=apache&os=debianbuster for HTTPS certificate.
 

@@ -171,7 +171,8 @@ def _make_envelope(data):
 
     return {
         'data': data,
-        'updated': time
+        'updated': time,
+        'customMessage': 'lastUpdateJan052025'
     }
 
 if __name__ == '__main__':

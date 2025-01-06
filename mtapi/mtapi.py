@@ -1,3 +1,5 @@
+#How to deploy updated API: use 'gcloud app deploy'... that's it.
+
 import urllib, contextlib, copy, datetime as dt
 from datetime import time
 from collections import defaultdict
@@ -60,7 +62,7 @@ class Mtapi(object):
                 terminal_name = "ERR"
 
             expressDiamondChars = ["X"]
-            expressNonDiamondChars = ["2", "3", "4", "5", "B", "D", "N", "Q"]
+            expressNonDiamondChars = ["A", "2", "3", "4", "5", "B", "D", "N", "Q"]
             skipStopChars = ["J", "Z"]
             service = "local"
             if route_id[-1] in expressDiamondChars:
