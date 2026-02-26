@@ -52,7 +52,7 @@ class Mtapi(object):
         def __getitem__(self, key):
             return self.json[key]
 
-        def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time):
+        def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time, stop_id=None):
             # currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
             # etaTime = timeDifference(currentTime, train_time)
             # etaTime = 1
@@ -60,6 +60,15 @@ class Mtapi(object):
                 terminal_name = stopJSON[terminal_id[:3]]['stop_name']
             except:
                 terminal_name = "ERR"
+
+            # Get direction label from stop data
+            direction_label = None
+            if stop_id and stop_id in stopJSON:
+                stop_data = stopJSON[stop_id]
+                if direction == 'N' and 'north_direction_label' in stop_data:
+                    direction_label = stop_data['north_direction_label']
+                elif direction == 'S' and 'south_direction_label' in stop_data:
+                    direction_label = stop_data['south_direction_label']
 
             expressDiamondChars = ["X"]
             expressNonDiamondChars = ["A", "2", "3", "4", "5", "B", "D", "N", "Q"]
@@ -72,7 +81,7 @@ class Mtapi(object):
 
             self.routes.add(route_id)
 
-            self.trains[direction].append({
+            train_data = {
                 'route': route_id,
                 'direction': direction,
                 'service': service,
@@ -81,7 +90,13 @@ class Mtapi(object):
                 #'eta': etaTime,
                 'terminal': terminal_id,
                 'terminalName': terminal_name
-            })
+            }
+
+            # Add direction label if available
+            if direction_label:
+                train_data['directionLabel'] = direction_label
+
+            self.trains[direction].append(train_data)
             self.last_update = feed_time
 
         def clear_train_data(self):
@@ -97,7 +112,7 @@ class Mtapi(object):
             self.trains['N'] = sorted(self.trains['N'], key=itemgetter('time'))[:max_trains]
             self.alltrains = sorted(self.alltrains, key=itemgetter('time'))[:max_trains]
 
-        def serialize(self):
+        def serialize(self, requested_stop_id=None, stop_id_to_name=None):
             out = {
                 'N': self.trains['N'],
                 'S': self.trains['S'],
@@ -106,6 +121,38 @@ class Mtapi(object):
                 'last_update': self.last_update
             }
             out.update(self.json)
+
+            # If a specific stop_id was requested, customize the name
+            if requested_stop_id and stop_id_to_name:
+                requested_stop_id_upper = requested_stop_id.upper()
+                if requested_stop_id_upper in self.json.get('stops', {}):
+                    # Get all stop names for this station
+                    stop_names = []
+                    requested_name = None
+
+                    for stop_id in self.json['stops'].keys():
+                        if stop_id in stop_id_to_name:
+                            name = stop_id_to_name[stop_id]
+                            if stop_id == requested_stop_id_upper:
+                                requested_name = name
+                            else:
+                                stop_names.append(name)
+
+                    # Put requested stop's name first, then join others
+                    if requested_name:
+                        # Remove duplicates while preserving order
+                        unique_other_names = []
+                        seen = set([requested_name])
+                        for name in stop_names:
+                            if name not in seen:
+                                unique_other_names.append(name)
+                                seen.add(name)
+
+                        if unique_other_names:
+                            out['stationName'] = requested_name + ' | ' + ' | '.join(unique_other_names)
+                        else:
+                            out['stationName'] = requested_name
+
             return out
         
 
@@ -129,6 +176,7 @@ class Mtapi(object):
         self._stations = {}
         self._stops = {}
         self._stops_to_stations = {}
+        self._stop_id_to_name = {}
         self._routes = {}
         self._read_lock = threading.RLock()
 
@@ -151,6 +199,10 @@ class Mtapi(object):
                 self._stops = json.load(f)
                 global stopJSON
                 stopJSON = self._stops.copy()
+                # Build stop_id to name mapping
+                for stop_id, stop_data in self._stops.items():
+                    if 'stop_name' in stop_data:
+                        self._stop_id_to_name[stop_id] = stop_data['stop_name']
 
         except IOError as e:
             print('Couldn\'t load stops file '+ stops_file)
@@ -233,7 +285,8 @@ class Mtapi(object):
                                                    terminal_id,
                                                    direction,
                                                    trip_stop.time,
-                                                   mta_data.timestamp)
+                                                   mta_data.timestamp,
+                                                   stop_id)
 
                     routes[route_id].add(stop_id)
 
@@ -281,7 +334,23 @@ class Mtapi(object):
             self._update()
 
         with self._read_lock:
-            out = [ self._stations[k].serialize() for k in ids ]
+            out = []
+            for requested_id in ids:
+                requested_id_upper = requested_id.upper()
+
+                # Check if it's a stop ID first (even if it's also a parent station ID)
+                if requested_id_upper in self._stops_to_stations:
+                    parent_id = self._stops_to_stations[requested_id_upper]
+                    out.append(self._stations[parent_id].serialize(
+                        requested_stop_id=requested_id_upper,
+                        stop_id_to_name=self._stop_id_to_name
+                    ))
+                # Check if it's only a parent station ID (not also a stop)
+                elif requested_id_upper in self._stations:
+                    out.append(self._stations[requested_id_upper].serialize())
+                else:
+                    # ID not found - this will cause a KeyError to be caught by the caller
+                    raise KeyError(f"Station or stop ID '{requested_id}' not found")
 
         return out
 

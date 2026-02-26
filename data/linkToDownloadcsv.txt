@@ -1,2 +1,3 @@
 stations: use the stops and transfers.txt under https://new.mta.info/developers under regular GTFS (a zip file)
-stationsv2: http://web.mta.info/developers/developer-data-terms.html#data
+stationsv2: https://data.ny.gov/api/views/39hk-dx4f/rows.csv?accessType=DOWNLOAD (from: https://www.mta.info/developers/display-elevators-NYCT)
+stationsv2 - expired: http://web.mta.info/developers/developer-data-terms.html#data

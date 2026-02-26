@@ -19,7 +19,7 @@ import os
 
 app = Flask(__name__)
 app.config.update(
-    MAX_TRAINS=10,
+    MAX_TRAINS=22,
     MAX_MINUTES=30,
     CACHE_SECONDS=60,
     THREADED=True
