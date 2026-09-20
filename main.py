@@ -10,7 +10,7 @@
 """
 
 from mtapi.mtapi import Mtapi
-from mtapi.service_alerts import ServiceAlerts, AlertsUnavailable
+from mtapi.service_alerts import ServiceAlerts
 from flask import Flask, request, Response, render_template, abort, redirect
 import json
 from datetime import datetime
@@ -159,18 +159,6 @@ def routes():
         'updated': mta.last_update()
         }
 
-@app.route('/service-alerts', methods=['GET'])
-@response_wrapper
-def subway_service_alerts():
-    try:
-        return service_alerts.get()
-    except AlertsUnavailable:
-        return Response(
-            response=json.dumps({'error': 'Service alerts are temporarily unavailable'}),
-            status=503,
-            mimetype='application/json'
-        )
-
 def _envelope_reduce(a, b):
     if a['last_update'] and b['last_update']:
         return a if a['last_update'] < b['last_update'] else b
@@ -185,7 +173,7 @@ def _make_envelope(data):
         time = reduce(_envelope_reduce, data)['last_update']
 
     return {
-        'data': data,
+        'data': service_alerts.attach(data),
         'updated': time,
         'customMessage': 'lastUpdateJan052025'
     }

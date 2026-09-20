@@ -37,13 +37,19 @@ This app makes use of Python threads. If running under uWSGI include the --enabl
 
 ### Subway service alerts
 
-`GET /service-alerts` returns `{ "feed": <MTA GTFS-RT JSON>, "fetchedAt": <Unix seconds>, "stale": <boolean> }`.
-It uses the public [MTA subway alerts feed](https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts.json), with no additional API key.
-The feed is cached for 60 seconds independently of arrivals. A failed refresh can reuse the last successful result for at most five minutes; otherwise the endpoint returns HTTP 503. Consumers should also check the feed timestamp.
+Every station in `/by-id`, `/by-route`, and `/by-location` includes `serviceAlerts`:
 
-Match `informed_entity` against arriving routes and station stops, and check `active_period` before displaying an alert as happening now. Mercury's `updated_at` is the alert's update time; the feed timestamp is not an alert update time. See the [MTA alert specification](https://www.mta.info/document/90881).
+```json
+{"status":"ok","updatedAt":1789921498,"expiresAt":1789923340,"alerts":[{"id":"lmm:alert:example","routes":["B"],"stationWide":false,"type":"Delays","planned":false,"text":"Northbound [B] trains are delayed.","updatedAt":1789921497,"schedule":"","activeUntil":null}]}
+```
 
-The frontend can fall back to MTA's public CORS-enabled JSON feed while this endpoint is being deployed.
+The backend fetches the public [MTA subway alerts feed](https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts.json) at most once every 60 seconds per worker while station requests are active. One background refresh serves all stations; station requests never wait for that fetch. Failed refreshes retry after 30 seconds and reuse cached alerts for at most five minutes. `status` is `loading`, `ok`, `stale`, or `unavailable`; errors never suppress train arrivals.
+
+The server selects active alerts for the station's arriving routes and stop-only station notices, excludes terminating trains, removes duplicates, and orders unplanned notices first. It returns plain English and preserves bracketed route tokens for the display. The frontend only applies its local hidden-route preference and rotates the results, with no separate alert requests or direct MTA calls.
+
+`updatedAt` is the feed's publication timestamp, which may remain unchanged between successful MTA responses. Cache freshness uses successful retrieval time; `active_period` determines whether work is happening now. See the [MTA alert specification](https://www.mta.info/document/90881). `expiresAt` bounds client reuse when station requests fail, and `activeUntil` lets the display remove an ending alert between station updates.
+
+Deploy the backend before the frontend, including both station API hosts if both remain in use. Older responses without `serviceAlerts` display an unavailable message instead of starting browser-side MTA polling.
 
 ## Settings
 
