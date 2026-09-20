@@ -1,0 +1,9 @@
+MTA_KEY = 'your-api-key-here'
+STATIONS_FILE = './data/stations.json'
+STOPS_FILE = './data/stationsv2.json'
+CROSS_ORIGIN = ''
+MAX_TRAINS=26
+MAX_MINUTES=40
+CACHE_SECONDS=39
+THREADED=True
+DEBUG = True

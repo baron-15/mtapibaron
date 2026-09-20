@@ -25,7 +25,7 @@ This project is under active development and any part of the API may change. Fee
 
 MTAPI is a Flask app designed to run under Python 3.3+.
 
-1. Create a `settings.cfg` file. A sample is provided as `settings.cfg.sample`.
+1. Review `settings.cfg`. It is committed with working defaults; `settings.cfg.sample` is a pristine copy to start from if you change it.
 2. Set up your environment and install dependencies.  
 `$ python3 -m venv .venv`  
 `$ source .venv/bin/activate`  

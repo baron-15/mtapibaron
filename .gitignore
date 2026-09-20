@@ -1,0 +1,15 @@
+# Virtual environments
+.venv/
+venv/
+scripts/.venv/
+
+# Python bytecode and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Local Claude Code settings
+.claude/settings.local.json
