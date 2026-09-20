@@ -35,6 +35,16 @@ This app makes use of Python threads. If running under uWSGI include the --enabl
 
 [Endpoints to retrieve train data and sample input and output are listed here.](https://github.com/jonthornton/MTAPI/tree/master/docs/endpoints.md)
 
+### Subway service alerts
+
+`GET /service-alerts` returns `{ "feed": <MTA GTFS-RT JSON>, "fetchedAt": <Unix seconds>, "stale": <boolean> }`.
+It uses the public [MTA subway alerts feed](https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts.json), with no additional API key.
+The feed is cached for 60 seconds independently of arrivals. A failed refresh can reuse the last successful result for at most five minutes; otherwise the endpoint returns HTTP 503. Consumers should also check the feed timestamp.
+
+Match `informed_entity` against arriving routes and station stops, and check `active_period` before displaying an alert as happening now. Mercury's `updated_at` is the alert's update time; the feed timestamp is not an alert update time. See the [MTA alert specification](https://www.mta.info/document/90881).
+
+The frontend can fall back to MTA's public CORS-enabled JSON feed while this endpoint is being deployed.
+
 ## Settings
 
 - **MTA_KEY** (required)  
