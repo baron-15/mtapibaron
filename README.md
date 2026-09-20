@@ -1,13 +1,19 @@
 # Jan 5th 2025 update
 Hello from Baron! This is just a refresher to myself on how I built this website (and its API)!
 
+## Origin and credits
+
+This project is derived from [MTAPI](https://github.com/jonthornton/MTAPI) by Jon Thornton, released under the MIT license. The core JSON proxy (`main.py`, `mtapi/`, `mtaproto/`, the station scripts and the endpoint docs) is his work. Everything since December 2023 (ETA accuracy, service alerts, train counts, the arrival-display UI in `templates/`, deploy config) is mine. See [NOTICE.md](NOTICE.md) for the file-by-file breakdown and [LICENSE](LICENSE) for the license text. Please report issues with this fork [here](https://github.com/baron-15/mtapibaron/issues) rather than to upstream.
+
 # THANKS
 https://www.youtube.com/watch?v=Nle8PcBSXrk and https://certbot.eff.org/instructions?ws=apache&os=debianbuster for HTTPS certificate.
 
 # Running the index.html after running the server
 Trying to create a UI to replicate the MTA realtime arrival screen on New York subway platforms
 
-# MTA Realtime API JSON Proxy
+# MTA Realtime API JSON Proxy (adapted from MTAPI)
+
+_The sections below are adapted from the upstream [MTAPI](https://github.com/jonthornton/MTAPI) README by Jon Thornton._
 
 MTAPI is a small HTTP server that converts the [MTA's realtime subway feed](https://api.mta.info/#/landing) from [Protocol Buffers/GTFS](https://developers.google.com/transit/gtfs/) to JSON. The app also adds caching and makes it possible to retrieve information by location and train line. 
 
@@ -33,7 +39,7 @@ This app makes use of Python threads. If running under uWSGI include the --enabl
 
 ## Endpoints
 
-[Endpoints to retrieve train data and sample input and output are listed here.](https://github.com/jonthornton/MTAPI/tree/master/docs/endpoints.md)
+[Endpoints to retrieve train data and sample input and output are listed here.](docs/endpoints.md)
 
 ### Subway service alerts
 
@@ -99,7 +105,7 @@ $ python make_stations_json.py stations.csv > stations.json
 
 ## Help
 
-Submit a [GitHub Issues request](https://github.com/jonthornton/MTAPI/issues). 
+Submit a [GitHub Issues request](https://github.com/baron-15/mtapibaron/issues) for this fork. For the original project, see [jonthornton/MTAPI](https://github.com/jonthornton/MTAPI).
 
 ## Projects
 
@@ -109,4 +115,9 @@ Here are some projects that use MTAPI.
 
 ## License
 
-The project is made available under the MIT license.
+This project is made available under the MIT license. See [LICENSE](LICENSE).
+
+- Copyright (c) 2014 Jon Thornton, original [MTAPI](https://github.com/jonthornton/MTAPI) code
+- Copyright (c) 2023-2026 Baron C, modifications in this repository
+
+See [NOTICE.md](NOTICE.md) for which files come from upstream and for third-party notices.

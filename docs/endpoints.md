@@ -1,3 +1,5 @@
+> Adapted from [MTAPI's endpoint documentation](https://github.com/jonthornton/MTAPI/blob/master/docs/endpoints.md) by Jon Thornton (MIT). Response shapes may differ where this fork changed them (for example `serviceAlerts`).
+
 ## Endpoints
 
 - **/by-location?lat=[latitude]&lon=[longitude]**  
