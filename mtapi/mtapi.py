@@ -11,6 +11,7 @@ import logging
 import google.protobuf.message
 from mtaproto.feedresponse import FeedResponse, Trip, TripStop, TZ
 from mtapi._mtapithreader import _MtapiThreader
+from mtapi.terminal_labels import terminal_labels
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,8 @@ class Mtapi(object):
         def __getitem__(self, key):
             return self.json[key]
 
-        def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time, stop_id=None):
+        def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time, stop_id=None,
+                      via_roosevelt_island=False):
             # currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
             # etaTime = timeDifference(currentTime, train_time)
             # etaTime = 1
@@ -95,6 +97,10 @@ class Mtapi(object):
             # Add direction label if available
             if direction_label:
                 train_data['directionLabel'] = direction_label
+
+            train_data.update(terminal_labels(
+                stopJSON.get(stop_id, {}), stopJSON.get(terminal_id[:3], {}),
+                terminal_name, direction_label, via_roosevelt_island))
 
             self.trains[direction].append(train_data)
             self.last_update = feed_time
@@ -267,7 +273,18 @@ class Mtapi(object):
                 trip_id = trip.trip_id
                 terminal_id = trip.terminal_id
 
-                for update in entity.trip_update.stop_time_update:
+                stop_updates = entity.trip_update.stop_time_update
+                # Inspect the whole supplied sequence before MAX_MINUTES/MAX_TRAINS
+                # remove arrivals. This applies to any line and either direction.
+                roosevelt_island_positions = [
+                    index for index, update in enumerate(stop_updates)
+                    if update.stop_id[:3] == 'B06' and update.schedule_relationship != update.SKIPPED
+                ]
+                terminal_index = len(stop_updates) - 1
+
+                for index, update in enumerate(stop_updates):
+                    if update.schedule_relationship == update.SKIPPED:
+                        continue
                     trip_stop = TripStop(update)
 
                     if trip_stop.time < self._last_update or trip_stop.time > max_time:
@@ -286,7 +303,10 @@ class Mtapi(object):
                                                    direction,
                                                    trip_stop.time,
                                                    mta_data.timestamp,
-                                                   stop_id)
+                                                   stop_id,
+                                                   via_roosevelt_island=any(
+                                                       index < via_index < terminal_index
+                                                       for via_index in roosevelt_island_positions))
 
                     routes[route_id].add(stop_id)
 

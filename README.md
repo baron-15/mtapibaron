@@ -55,7 +55,31 @@ The server selects active alerts for the station's arriving routes and stop-only
 
 `updatedAt` is the feed's publication timestamp, which may remain unchanged between successful MTA responses. Cache freshness uses successful retrieval time; `active_period` determines whether work is happening now. See the [MTA alert specification](https://www.mta.info/document/90881). `expiresAt` bounds client reuse when station requests fail, and `activeUntil` lets the display remove an ending alert between station updates.
 
-Deploy the backend before the frontend, including both station API hosts if both remain in use. Older responses without `serviceAlerts` display an unavailable message instead of starting browser-side MTA polling.
+Deploy the backend on Render before the frontend; the frontend uses only the Render API host. Older responses without `serviceAlerts` display an unavailable message instead of starting browser-side MTA polling.
+
+### V2 terminal labels
+
+Every train in `N`, `S`, and `alltrains` includes `terminalPrimary` and
+`terminalSecondary` (a string or `null`). The frontend renders these directly;
+`terminalName`, `terminal`, and `directionLabel` remain unchanged for V1 and audio.
+See the [train field contract](docs/endpoints.md#terminal-display-fields).
+
+Labels are calculated per actual stop within the station complex. Borough
+headings stay singular. At Manhattan stops, Uptown/Downtown can add the terminal
+borough, including `Uptown & The Bronx` for a Bronx terminal. Roosevelt Island
+is a subtitle qualifier only when the trip's supplied stop sequence includes
+it ahead of the current stop and strictly before the terminal. This applies
+to any line and either direction, excludes skipped stops, and runs before
+`MAX_MINUTES` and `MAX_TRAINS` trim arrivals. An explicitly listed stop without
+a time prediction still supplies routing information; absent stops are not
+inferred from a line's usual route. Existing `via` text is preserved.
+
+Deploy this backend on Render before the frontend that consumes these fields.
+An older backend remains usable via the frontend's plain `terminalName` fallback.
+
+Run focused backend checks with
+`python -m unittest discover -s tests -p 'test_terminal_labels.py'` and
+`python -m unittest discover -s tests -p 'test_service_alerts.py'`.
 
 ## Settings
 

@@ -223,3 +223,45 @@ Lists available routes.
     "updated": "2014-08-29T15:09:57-04:00"
 }
 ```
+
+## Terminal display fields
+
+Station responses from `/by-id`, `/by-route`, and `/by-location` include these
+fields on each train in `N`, `S`, and `alltrains`:
+
+```json
+{
+    "route": "M",
+    "direction": "N",
+    "trip": "example-trip",
+    "terminal": "G08N",
+    "terminalName": "Forest Hills-71 Av",
+    "directionLabel": "Uptown",
+    "terminalPrimary": "Uptown & Queens",
+    "terminalSecondary": "Forest Hills-71 Av via Roosevelt Island"
+}
+```
+
+This example describes a train at W 4 St whose trip update includes Roosevelt
+Island before Forest Hills. The same trip has different labels at later stops.
+
+- `terminalPrimary`: the V2 headline. Recognized borough direction labels stay
+  singular (for example, `Manhattan` for a Brooklyn train entering Manhattan
+  before Queens). At Manhattan stops, Uptown/Downtown can add a Brooklyn or Queens
+  terminal borough; Uptown can add `The Bronx`. Otherwise the raw terminal name
+  is the fallback for an unrecognized direction label.
+- `terminalSecondary`: the terminal name under a recognized direction heading,
+  optionally followed by ` via Roosevelt Island`. It is `null` when the headline
+  already supplies the terminal name, or just `via Roosevelt Island` when that
+  fallback headline needs the qualifier. Clients hide a null/empty subtitle.
+- `terminalName`, `terminal`, and `directionLabel`: existing destination/direction
+  fields, retained without display qualifiers for older clients and audio.
+
+The Roosevelt Island qualifier uses stop `B06` in the ordered stop updates for
+that specific trip. It must be ahead of the current stop, strictly before the
+terminal, and not marked `SKIPPED`. It is not added at/after Roosevelt Island,
+for a Roosevelt Island terminal, or when the stop is absent from the supplied
+sequence. This works for either direction and any route; it does not assume
+that every F or M train uses that station. The check precedes arrival-window
+and train-count limits and needs no additional feed requests. Existing `via`
+text in a terminal name is left intact. Skipped stops do not receive arrivals.
