@@ -54,7 +54,7 @@ class Mtapi(object):
             return self.json[key]
 
         def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time, stop_id=None,
-                      via_roosevelt_island=False):
+                      via_roosevelt_island=False, jfk_ahead=False):
             # currentTime = dt.datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S%z')
             # etaTime = timeDifference(currentTime, train_time)
             # etaTime = 1
@@ -100,7 +100,7 @@ class Mtapi(object):
 
             train_data.update(terminal_labels(
                 stopJSON.get(stop_id, {}), stopJSON.get(terminal_id[:3], {}),
-                terminal_name, direction_label, via_roosevelt_island))
+                terminal_name, direction_label, via_roosevelt_island, jfk_ahead))
 
             self.trains[direction].append(train_data)
             self.last_update = feed_time
@@ -280,6 +280,11 @@ class Mtapi(object):
                     index for index, update in enumerate(stop_updates)
                     if update.stop_id[:3] == 'B06' and update.schedule_relationship != update.SKIPPED
                 ]
+                jfk_positions = [
+                    index for index, update in enumerate(stop_updates)
+                    if update.schedule_relationship != update.SKIPPED
+                    and 'JFK' in self._stop_id_to_name.get(update.stop_id[:3], '').upper()
+                ]
                 terminal_index = len(stop_updates) - 1
 
                 for index, update in enumerate(stop_updates):
@@ -306,7 +311,8 @@ class Mtapi(object):
                                                    stop_id,
                                                    via_roosevelt_island=any(
                                                        index < via_index < terminal_index
-                                                       for via_index in roosevelt_island_positions))
+                                                       for via_index in roosevelt_island_positions),
+                                                   jfk_ahead=any(index < jfk_index for jfk_index in jfk_positions))
 
                     routes[route_id].add(stop_id)
 

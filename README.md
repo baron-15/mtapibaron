@@ -64,6 +64,14 @@ Every train in `N`, `S`, and `alltrains` includes `terminalPrimary` and
 `terminalName`, `terminal`, and `directionLabel` remain unchanged for V1 and audio.
 See the [train field contract](docs/endpoints.md#terminal-display-fields).
 
+Terminal headlines split Forest Hills / 71 Av, Bay Ridge / 95 St,
+34 St / Hudson Yards, Far Rockaway / Mott Av, and Coney Island / Stillwell Av,
+while Jamaica Center omits Parsons/Archer.
+Under a borough or direction headline,
+only the short destination name appears in the subtitle (for example,
+Manhattan / Bay Ridge). Exceptions follow the actual terminal stop ID on any
+route; Jamaica-179 St stays intact.
+
 Labels are calculated per actual stop within the station complex. Borough
 headings stay singular. At Manhattan stops, Uptown/Downtown can add the terminal
 borough, including `Uptown & The Bronx` for a Bronx terminal. Roosevelt Island
@@ -73,6 +81,15 @@ to any line and either direction, excludes skipped stops, and runs before
 `MAX_MINUTES` and `MAX_TRAINS` trim arrivals. An explicitly listed stop without
 a time prediction still supplies routing information; absent stops are not
 inferred from a line's usual route. Existing `via` text is preserved.
+
+Any train identifies JFK when its supplied stop sequence includes an upcoming,
+non-skipped station whose name contains `JFK` (case-insensitive). This covers
+Sutphin Blvd-Archer Av-JFK Airport and Howard Beach-JFK Airport. Under a direction
+headline, the subtitle adds `/JFK` (for example, `Jamaica Center/JFK`); under a
+terminal headline, an empty subtitle becomes `JFK`. This follows the actual trip
+in either direction, clears when no JFK stop remains ahead, and preserves
+Roosevelt Island text. Trains without an upcoming JFK stop, including A trains
+to Lefferts Blvd, keep their existing labels.
 
 Deploy this backend on Render before the frontend that consumes these fields.
 An older backend remains usable via the frontend's plain `terminalName` fallback.

@@ -20,7 +20,7 @@ STATIONS = json.loads((ROOT / 'data/stations.json').read_text())
 class LabelTests(unittest.TestCase):
     def test_manhattan_uptown_and_downtown(self):
         for direction in ('Uptown', 'Downtown'):
-            for terminal, suffix in (('R45', ' & Brooklyn'), ('G08', ' & Queens'),
+            for terminal, suffix in (('D42', ' & Brooklyn'), ('F01', ' & Queens'),
                                      ('A02', ''), ('401', ' & The Bronx' if direction == 'Uptown' else '')):
                 with self.subTest(direction=direction, terminal=terminal):
                     labels = terminal_labels(STOPS['127'], STOPS[terminal], 'Terminal', direction)
@@ -29,7 +29,7 @@ class LabelTests(unittest.TestCase):
 
     def test_borough_headings_stay_singular(self):
         for direction in ('Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'The Bronx'):
-            for terminal in ('R45', 'G08', '401', 'A02'):
+            for terminal in ('D42', 'F01', '401', 'A02'):
                 self.assertEqual(terminal_labels(STOPS['127'], STOPS[terminal], 'Terminal', direction),
                                  {'terminalPrimary': direction, 'terminalSecondary': 'Terminal'})
 
@@ -49,6 +49,13 @@ class LabelTests(unittest.TestCase):
     def test_existing_via_text_is_preserved(self):
         for name in ('Jamaica-179 St via Roosevelt Island', 'Jamaica-179 St VIA 53 St'):
             self.assertEqual(terminal_labels({}, {}, name, 'Uptown', True)['terminalSecondary'], name)
+        name = 'Forest Hills-71 Av VIA 53 St'
+        for direction, primary, secondary in (
+            ('Queens', 'Queens', 'Forest Hills VIA 53 St'),
+            ('Outbound', 'Forest Hills', '71 Av VIA 53 St'),
+        ):
+            self.assertEqual(terminal_labels({}, STOPS['G08'], name, direction, True),
+                             {'terminalPrimary': primary, 'terminalSecondary': secondary})
 
 
 class TripLabelTests(unittest.TestCase):
@@ -99,35 +106,221 @@ class TripLabelTests(unittest.TestCase):
         return next(train for train in trains if train['trip'] == 'trip-' + str(trip_index))
 
     def test_any_line_and_both_directions_use_the_actual_trip(self):
-        for route, direction, origin, terminal in (
-            ('F', 'N', 'D20', 'F01'), ('F', 'S', 'G08', 'D43'),
-            ('M', 'N', 'D20', 'G08'), ('M', 'S', 'G08', 'M01'),
-            ('R', 'S', 'G08', 'R45')
+        for route, direction, origin, terminal, display_name in (
+            ('F', 'N', 'D20', 'F01', 'Jamaica-179 St'),
+            ('F', 'S', 'G08', 'D43', 'Coney Island'),
+            ('M', 'N', 'D20', 'G08', 'Forest Hills'),
+            ('M', 'S', 'G08', 'M01', 'Middle Village-Metropolitan Av'),
+            ('R', 'S', 'G08', 'R45', 'Bay Ridge'),
+            ('E', 'N', 'D20', 'G05', 'Jamaica Center'),
         ):
             with self.subTest(route=route, direction=direction):
                 api = self.process([(route, direction, [(origin, 1, 0), ('B06', 8, 0), (terminal, 20, 0)])])
                 train = self.train_at(api, origin)
                 terminal_name = STOPS[terminal]['stop_name']
-                self.assertEqual(train['terminalSecondary'], terminal_name + ' via Roosevelt Island')
+                self.assertEqual(train['terminalSecondary'], display_name + ' via Roosevelt Island')
                 self.assertEqual(train['terminalName'], terminal_name)
                 self.assertEqual(train['terminal'], terminal + direction)
                 self.assertEqual(train['directionLabel'], STOPS[origin][
                     'north_direction_label' if direction == 'N' else 'south_direction_label'])
 
     def test_user_borough_examples(self):
-        for route, direction, origin, terminal, primary in (
-            ('F', 'S', 'F04', 'D43', 'Manhattan'),
-            ('R', 'N', 'R28', 'G08', 'Manhattan'),
-            ('4', 'S', '401', '250', 'Manhattan'),
-            ('A', 'S', 'A38', 'H15', 'Brooklyn'),
-            ('4', 'N', '626', '401', 'Uptown & The Bronx'),
-            ('4', 'N', '621', '401', 'The Bronx')
+        for route, direction, origin, terminal, primary, secondary in (
+            ('F', 'S', 'F04', 'D43', 'Manhattan', 'Coney Island'),
+            ('R', 'N', 'R28', 'G08', 'Manhattan', 'Forest Hills'),
+            ('R', 'S', 'G09', 'R45', 'Manhattan', 'Bay Ridge'),
+            ('E', 'N', 'F12', 'G05', 'Queens', 'Jamaica Center'),
+            ('7', 'S', '719', '726', 'Manhattan', '34 St'),
+            ('7', 'S', '723', '726', '34 St', 'Hudson Yards'),
+            ('7X', 'S', '725', '726', '34 St', 'Hudson Yards'),
+            ('4', 'S', '401', '250', 'Manhattan', 'Crown Hts-Utica Av'),
+            ('A', 'S', 'A38', 'H15', 'Brooklyn', 'Rockaway Park-Beach 116 St'),
+            ('4', 'N', '626', '401', 'Uptown & The Bronx', 'Woodlawn'),
+            ('4', 'N', '621', '401', 'The Bronx', 'Woodlawn')
         ):
             with self.subTest(route=route, origin=origin):
                 api = self.process([(route, direction, [(origin, 1, 0), (terminal, 20, 0)])])
                 train = self.train_at(api, origin)
                 self.assertEqual(train['terminalPrimary'], primary)
-                self.assertEqual(train['terminalSecondary'], STOPS[terminal]['stop_name'])
+                self.assertEqual(train['terminalSecondary'], secondary)
+                self.assertEqual(train['terminalName'], STOPS[terminal]['stop_name'])
+                self.assertEqual(train['terminal'], terminal + direction)
+
+    def test_destination_labels_change_along_trip_without_changing_raw_fields(self):
+        for route, direction, terminal, stops, expected in (
+            ('R', 'N', 'G08', ['R28', 'R14', 'G09', 'G08'], [
+                ('Manhattan', 'Forest Hills'), ('Uptown & Queens', 'Forest Hills'),
+                ('Forest Hills', '71 Av'), ('Forest Hills', '71 Av')]),
+            ('R', 'S', 'R45', ['G09', 'R14', 'R31', 'R45'], [
+                ('Manhattan', 'Bay Ridge'), ('Downtown & Brooklyn', 'Bay Ridge'),
+                ('Bay Ridge', '95 St'), ('Bay Ridge', '95 St')]),
+            ('E', 'N', 'G05', ['D20', 'F12', 'G14', 'G05'], [
+                ('Uptown & Queens', 'Jamaica Center'), ('Queens', 'Jamaica Center'),
+                ('Jamaica Center', None), ('Jamaica Center', None)]),
+            ('E', 'N', 'F01', ['G14', 'F01'], [
+                ('Jamaica-179 St', None), ('Jamaica-179 St', None)]),
+            ('F', 'N', 'G08', ['G14', 'G08'], [
+                ('Forest Hills', '71 Av'), ('Forest Hills', '71 Av')]),
+            ('F', 'S', 'D43', ['D20', 'F39', 'D43'], [
+                ('Downtown & Brooklyn', 'Coney Island'),
+                ('Coney Island', 'Stillwell Av'), ('Coney Island', 'Stillwell Av')]),
+            ('Q', 'S', 'D43', ['R14', 'D42', 'D43'], [
+                ('Downtown & Brooklyn', 'Coney Island'),
+                ('Coney Island', 'Stillwell Av'), ('Coney Island', 'Stillwell Av')]),
+            ('A', 'S', 'H11', ['A55', 'H04', 'H11'], [
+                ('Queens', 'Far Rockaway'),
+                ('Far Rockaway', 'Mott Av'), ('Far Rockaway', 'Mott Av')]),
+        ):
+            with self.subTest(route=route, terminal=terminal):
+                api = self.process([(route, direction, [
+                    (stop, index + 1, 0) for index, stop in enumerate(stops)])])
+                for stop, (primary, secondary) in zip(stops, expected):
+                    train = self.train_at(api, stop)
+                    self.assertEqual(train['terminalPrimary'], primary)
+                    self.assertEqual(train['terminalSecondary'], secondary)
+                    self.assertEqual(train['terminal'], terminal + direction)
+                    self.assertEqual(train['terminalName'], STOPS[terminal]['stop_name'])
+                    self.assertEqual(train['directionLabel'], STOPS[stop][
+                        'north_direction_label' if direction == 'N' else 'south_direction_label'])
+
+    def test_via_qualifier_keeps_terminal_detail_and_disappears_after_island(self):
+        for terminal, primary, detail in (
+            ('G08', 'Forest Hills', '71 Av'),
+            ('R45', 'Bay Ridge', '95 St'),
+            ('G05', 'Jamaica Center', None),
+            ('H11', 'Far Rockaway', 'Mott Av'),
+            ('D43', 'Coney Island', 'Stillwell Av'),
+        ):
+            with self.subTest(terminal=terminal):
+                api = self.process([('R', 'N', [
+                    ('G09', 1, 0), ('B06', 8, 0), (terminal, 20, 0)])])
+                before = self.train_at(api, 'G09')
+                self.assertEqual(before['terminalPrimary'], primary)
+                self.assertEqual(before['terminalSecondary'],
+                                 (detail + ' ' if detail else '') + 'via Roosevelt Island')
+                at_island = self.train_at(api, 'B06')
+                self.assertEqual(at_island['terminalPrimary'], 'Queens')
+                self.assertEqual(at_island['terminalSecondary'], primary)
+
+    def test_e_jfk_labels_follow_upcoming_sutphin_stop(self):
+        stops = ['A28', 'F12', 'G07', 'G06', 'G05']
+        api = self.process([('E', 'N', [
+            (stop, index + 1, 0) for index, stop in enumerate(stops)])])
+        for stop, primary, secondary in (
+            ('A28', 'Uptown & Queens', 'Jamaica Center/JFK'),
+            ('F12', 'Queens', 'Jamaica Center/JFK'),
+            ('G07', 'Jamaica Center', 'JFK'),
+            ('G06', 'Jamaica Center', None),
+            ('G05', 'Jamaica Center', None),
+        ):
+            with self.subTest(stop=stop):
+                train = self.train_at(api, stop)
+                self.assertEqual(train['terminalPrimary'], primary)
+                self.assertEqual(train['terminalSecondary'], secondary)
+                self.assertEqual(train['terminal'], 'G05N')
+                self.assertEqual(train['terminalName'], 'Jamaica Center-Parsons/Archer')
+                self.assertEqual(train['directionLabel'], STOPS[stop]['north_direction_label'])
+
+    def test_jfk_requires_an_explicit_non_skipped_stop(self):
+        for route, direction, stops in (
+            ('E', 'N', [('A28', 1, 0), ('G05', 20, 0)]),
+            ('E', 'N', [('A28', 1, 0), ('G06', 18, 1), ('G05', 20, 0)]),
+            ('E', 'N', [('A28', 1, 0), ('F01', 20, 0)]),
+            ('J', 'N', [('M23', 1, 0), ('G06', 18, 1), ('G05', 20, 0)]),
+            ('Z', 'N', [('M23', 1, 0), ('G05', 20, 0)]),
+            ('A', 'S', [('A28', 1, 0), ('H03', 18, 1), ('H11', 20, 0)]),
+            ('A', 'S', [('A28', 1, 0), ('A65', 20, 0)]),
+            ('A', 'S', [('A28', 1, 0), ('XXX', 18, 0), ('H11', 20, 0)]),
+        ):
+            with self.subTest(route=route, stops=stops):
+                api = self.process([(route, direction, stops)])
+                train = self.train_at(api, stops[0][0])
+                self.assertNotIn('JFK', train['terminalPrimary'])
+                self.assertNotIn('JFK', train['terminalSecondary'] or '')
+
+    def test_jfk_follows_j_z_and_diverted_trains(self):
+        for route, origin, next_stop, heading in (
+            ('J', 'M23', 'J12', 'Brooklyn'),
+            ('Z', 'M23', 'J12', 'Brooklyn'),
+            ('F', 'A28', 'G07', 'Uptown & Queens'),
+        ):
+            with self.subTest(route=route):
+                api = self.process([(route, 'N', [
+                    (origin, 1, 0), (next_stop, 10, 0), ('G06', 18, 0), ('G05', 20, 0)])])
+                train = self.train_at(api, origin)
+                self.assertEqual(train['terminalPrimary'], heading)
+                self.assertEqual(train['terminalSecondary'], 'Jamaica Center/JFK')
+                self.assertEqual(train['terminalName'], 'Jamaica Center-Parsons/Archer')
+                self.assertEqual(train['terminal'], 'G05N')
+                self.assertEqual(self.train_at(api, next_stop)['terminalPrimary'], 'Jamaica Center')
+                self.assertEqual(self.train_at(api, next_stop)['terminalSecondary'], 'JFK')
+                self.assertIsNone(self.train_at(api, 'G06')['terminalSecondary'])
+
+    def test_a_jfk_labels_follow_howard_beach_on_both_rockaway_branches(self):
+        for terminal, destination, detail in (
+            ('H11', 'Far Rockaway', 'Mott Av'),
+            ('H15', 'Rockaway Park-Beach 116 St', None),
+        ):
+            with self.subTest(terminal=terminal):
+                stops = ['A28', 'A55', 'H02', 'H03', 'H04', terminal]
+                api = self.process([('A', 'S', [
+                    (stop, index + 1, 0) for index, stop in enumerate(stops)])])
+                for stop, primary, secondary in (
+                    ('A28', 'Downtown & Queens', destination + '/JFK'),
+                    ('A55', 'Queens', destination + '/JFK'),
+                    ('H02', destination, (detail + '/' if detail else '') + 'JFK'),
+                    ('H03', destination, detail),
+                    ('H04', destination, detail),
+                ):
+                    train = self.train_at(api, stop)
+                    self.assertEqual(train['terminalPrimary'], primary)
+                    self.assertEqual(train['terminalSecondary'], secondary)
+                    self.assertEqual(train['terminalName'], STOPS[terminal]['stop_name'])
+                    self.assertEqual(train['terminal'], terminal + 'S')
+
+    def test_jfk_handles_both_directions_and_airport_connection_terminals(self):
+        api = self.process([('E', 'S', [
+            ('G05', 1, 0), ('G06', 3, 0), ('G07', 5, 0), ('E01', 60, 0)])])
+        self.assertEqual(self.train_at(api, 'G05')['terminalSecondary'], 'World Trade Center/JFK')
+        for stop in ('G06', 'G07'):
+            self.assertEqual(self.train_at(api, stop)['terminalSecondary'], 'World Trade Center')
+        api = self.process([('E', 'N', [('A28', 1, 0), ('G06', 20, 0)])])
+        self.assertEqual(self.train_at(api, 'A28')['terminalSecondary'],
+                         'Sutphin Blvd-Archer Av-JFK Airport')
+        api = self.process([('A', 'N', [
+            ('H11', 1, 0), ('H03', 10, 0), ('H02', 12, 0), ('A02', 60, 0)])])
+        self.assertEqual(self.train_at(api, 'H11')['terminalSecondary'], 'Inwood-207 St/JFK')
+        for stop in ('H03', 'H02'):
+            self.assertEqual(self.train_at(api, stop)['terminalSecondary'], 'Inwood-207 St')
+        api = self.process([('A', 'S', [('A28', 1, 0), ('H03', 20, 0)])])
+        self.assertEqual(self.train_at(api, 'A28')['terminalSecondary'], 'Howard Beach-JFK Airport')
+
+    def test_jfk_is_per_trip_and_survives_prediction_and_arrival_limits(self):
+        for sutphin_minutes in (None, 40):
+            with self.subTest(sutphin_minutes=sutphin_minutes):
+                api = self.process([
+                    ('E', 'N', [('A28', 1, 0), ('G06', sutphin_minutes, 2), ('G05', 80, 0)]),
+                    ('E', 'N', [('A28', 2, 0), ('F01', 81, 0)]),
+                ], max_minutes=30)
+                self.assertEqual(self.train_at(api, 'A28', 0)['terminalSecondary'], 'Jamaica Center/JFK')
+                self.assertEqual(self.train_at(api, 'A28', 1)['terminalSecondary'], 'Jamaica-179 St')
+        api = self.process([('E', 'N', [
+            ('A28', 1, 0), ('G06', 40, 0), ('G05', 80, 0)])], max_minutes=30, max_trains=1)
+        self.assertEqual(self.train_at(api, 'A28')['terminalSecondary'], 'Jamaica Center/JFK')
+
+    def test_jfk_combines_with_roosevelt_island_and_keeps_query_aliases(self):
+        api = self.process([('E', 'N', [
+            ('D20', 1, 0), ('B06', 10, 0), ('G07', 20, 0), ('G06', 25, 0), ('G05', 30, 0)])])
+        expected = self.train_at(api, 'D20')
+        self.assertEqual(expected['terminalSecondary'], 'Jamaica Center/JFK via Roosevelt Island')
+        self.assertEqual(self.train_at(api, 'B06')['terminalSecondary'], 'Jamaica Center/JFK')
+        self.assertEqual(self.train_at(api, 'G07')['terminalSecondary'], 'JFK')
+        self.assertEqual(self.train_at(api, 'A32'), expected)
+        for station in (api.get_by_id(['D20'])[0],
+                        next(s for s in api.get_by_route('E') if 'D20' in s['stops']),
+                        next(s for s in api.get_by_point([40.732338, -74.000495], 10) if 'D20' in s['stops'])):
+            self.assertEqual(station['N'][0], expected)
+            self.assertEqual(station['alltrains'][0], expected)
 
     def test_label_changes_at_and_after_roosevelt_island(self):
         for direction, stops in (

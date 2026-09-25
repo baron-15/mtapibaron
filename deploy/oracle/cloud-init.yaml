@@ -1,0 +1,172 @@
+#cloud-config
+# Bootstraps an Ubuntu VM on Oracle Cloud to run mtapibaron behind Caddy (automatic HTTPS).
+# provision.sh fills in the double-underscore placeholders before passing this file as instance user-data.
+# Everything below is idempotent; re-run with:  sudo /usr/local/bin/mtapi-bootstrap
+package_update: true
+package_upgrade: false
+packages:
+  - git
+  - curl
+  - jq
+  - gnupg
+  - ca-certificates
+  - apt-transport-https
+  - debian-keyring
+  - debian-archive-keyring
+  - build-essential
+  - iptables-persistent
+
+write_files:
+  - path: /etc/mtapi/mtapi.env
+    permissions: "0644"
+    content: |
+      # Environment for the mtapi systemd service (see deploy/oracle/README.md).
+      # By default the app reads the committed settings.cfg from the repo checkout, same as Render.
+      # To use a server-specific config instead, copy settings.cfg to /etc/mtapi/settings.cfg,
+      # edit it, uncomment the next line, then: sudo systemctl restart mtapi
+      #MTAPI_SETTINGS=/etc/mtapi/settings.cfg
+
+  - path: /etc/systemd/system/mtapi.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=mtapibaron - MTA realtime subway JSON API (gunicorn)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=mtapi
+      Group=mtapi
+      WorkingDirectory=/opt/mtapibaron
+      EnvironmentFile=-/etc/mtapi/mtapi.env
+      # ONE worker on purpose: the feed cache and the background refresh thread live in-process,
+      # so extra workers would each poll the MTA independently. Threads handle concurrency.
+      ExecStart=/opt/mtapibaron/.venv/bin/gunicorn \
+        --workers 1 --threads 8 \
+        --bind 127.0.0.1:8000 \
+        --timeout 90 --graceful-timeout 20 \
+        --access-logfile - --error-logfile - --log-level info \
+        main:app
+      Restart=always
+      RestartSec=5
+      NoNewPrivileges=true
+      PrivateTmp=true
+      ProtectSystem=full
+      ProtectHome=true
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/local/bin/mtapi-update
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      # Pull the latest commit of the deployed branch and restart the API.
+      # Local edits inside /opt/mtapibaron are discarded (use /etc/mtapi/settings.cfg for overrides).
+      set -euo pipefail
+      APP_DIR=/opt/mtapibaron
+      cd "$APP_DIR"
+      BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      git fetch --quiet origin "$BRANCH"
+      git reset --hard --quiet "origin/$BRANCH"
+      /usr/local/bin/uv pip install --quiet --python .venv/bin/python -r requirements.txt
+      chown -R mtapi:mtapi "$APP_DIR"
+      systemctl restart mtapi
+      for _ in $(seq 1 30); do
+        if curl -sf http://127.0.0.1:8000/routes >/dev/null; then
+          echo "mtapi updated to $(git rev-parse --short HEAD) and healthy"
+          exit 0
+        fi
+        sleep 2
+      done
+      echo "mtapi failed its health check after update" >&2
+      journalctl -u mtapi -n 40 --no-pager >&2
+      exit 1
+
+  - path: /usr/local/bin/mtapi-bootstrap
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      export DEBIAN_FRONTEND=noninteractive
+      DOMAIN="__DOMAIN__"
+      ACME_EMAIL="__ACME_EMAIL__"
+      REPO_URL="__REPO_URL__"
+      BRANCH="__BRANCH__"
+      APP_DIR=/opt/mtapibaron
+      APP_USER=mtapi
+      PY_VERSION=3.10
+      export UV_PYTHON_INSTALL_DIR=/opt/uv/python
+      log() { echo "[$(date -u +%FT%TZ)] $*"; }
+
+      log "1/7 host firewall: Oracle's Ubuntu images end the INPUT chain with a REJECT rule, so open 80/443 here too"
+      open_port() {
+        local p=$1
+        iptables -C INPUT -p tcp -m state --state NEW -m tcp --dport "$p" -j ACCEPT 2>/dev/null \
+          || iptables -I INPUT 1 -p tcp -m state --state NEW -m tcp --dport "$p" -j ACCEPT
+        ip6tables -C INPUT -p tcp -m state --state NEW -m tcp --dport "$p" -j ACCEPT 2>/dev/null \
+          || ip6tables -I INPUT 1 -p tcp -m state --state NEW -m tcp --dport "$p" -j ACCEPT || true
+      }
+      open_port 80
+      open_port 443
+      if command -v netfilter-persistent >/dev/null; then netfilter-persistent save; else
+        mkdir -p /etc/iptables; iptables-save > /etc/iptables/rules.v4; ip6tables-save > /etc/iptables/rules.v6 || true; fi
+
+      log "2/7 service user"
+      id "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --home-dir /var/lib/$APP_USER --shell /usr/sbin/nologin "$APP_USER"
+
+      log "3/7 uv + Python $PY_VERSION (the pinned protobuf 3.20.3 only ships binary wheels up to 3.10)"
+      if ! command -v uv >/dev/null; then
+        curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh
+      fi
+      uv python install "$PY_VERSION"
+      chmod -R a+rX /opt/uv
+
+      log "4/7 checkout $REPO_URL ($BRANCH) into $APP_DIR"
+      if [ ! -d "$APP_DIR/.git" ]; then
+        git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
+      fi
+      cd "$APP_DIR"
+      [ -x .venv/bin/python ] || uv venv --python "$PY_VERSION" .venv
+      uv pip install --python .venv/bin/python -r requirements.txt
+      chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+
+      log "5/7 systemd service"
+      systemctl daemon-reload
+      systemctl enable --now mtapi
+      for _ in $(seq 1 45); do curl -sf http://127.0.0.1:8000/routes >/dev/null && break; sleep 2; done
+      curl -sf http://127.0.0.1:8000/routes >/dev/null && log "gunicorn is answering on 127.0.0.1:8000" \
+        || { log "WARNING: gunicorn not healthy yet; check: journalctl -u mtapi"; }
+
+      log "6/7 Caddy (reverse proxy with automatic HTTPS)"
+      if ! command -v caddy >/dev/null; then
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
+        chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
+        apt-get update -y
+        apt-get install -y caddy
+      fi
+
+      log "7/7 public hostname + Caddyfile"
+      if [ -z "$DOMAIN" ]; then
+        PUBLIC_IP=$(curl -sf -H 'Authorization: Bearer Oracle' http://169.254.169.254/opc/v2/vnics/ | jq -r '.[0].publicIp // empty' || true)
+        [ -n "$PUBLIC_IP" ] || PUBLIC_IP=$(curl -sf https://api.ipify.org)
+        DOMAIN="${PUBLIC_IP//./-}.sslip.io"
+        log "no domain given; using $DOMAIN (sslip.io resolves it to $PUBLIC_IP)"
+      fi
+      echo "$DOMAIN" > /etc/mtapi/domain
+      {
+        if [ -n "$ACME_EMAIL" ]; then printf '{\n\temail %s\n}\n\n' "$ACME_EMAIL"; fi
+        printf '%s {\n\tencode zstd gzip\n\theader -Server\n\treverse_proxy 127.0.0.1:8000\n}\n' "$DOMAIN"
+      } > /etc/caddy/Caddyfile
+      caddy validate --config /etc/caddy/Caddyfile
+      systemctl enable caddy
+      systemctl restart caddy
+
+      log "done. API: https://$DOMAIN/routes   (certificate issuance can take a minute; watch: journalctl -u caddy -f)"
+
+runcmd:
+  - [ bash, -c, "/usr/local/bin/mtapi-bootstrap >> /var/log/mtapi-bootstrap.log 2>&1" ]
+
+final_message: "mtapi cloud-init finished after $UPTIME seconds; see /var/log/mtapi-bootstrap.log"
