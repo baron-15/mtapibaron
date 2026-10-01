@@ -48,10 +48,29 @@ class Mtapi(object):
         def __init__(self, json):
             self.json = json
             self.trains = {}
+            self.normal_routes = []
             self.clear_train_data()
 
         def __getitem__(self, key):
             return self.json[key]
+
+        def set_normal_routes(self, stops):
+            routes = set()
+            for stop_id in self.json.get('stops', {}):
+                for route in stops.get(stop_id, {}).get('daytime_routes', '').split():
+                    # Station metadata calls all three shuttles S; the feeds
+                    # identify them separately. D26 is Franklin's shared stop.
+                    if route == 'S':
+                        if stop_id.startswith('H'):
+                            route = 'H'
+                        elif stop_id.startswith('9'):
+                            route = 'GS'
+                        elif stop_id.startswith('S') or stop_id == 'D26':
+                            route = 'FS'
+                    elif route == 'SIR':
+                        route = 'SI'
+                    routes.add(route)
+            self.normal_routes = sorted(routes)
 
         def add_train(self, route_id, trip_id, terminal_id, direction, train_time, feed_time, stop_id=None,
                       via_roosevelt_island=False, jfk_ahead=False):
@@ -124,6 +143,7 @@ class Mtapi(object):
                 'S': self.trains['S'],
                 'alltrains': self.alltrains,
                 'routes': self.routes,
+                'normalRoutes': self.normal_routes,
                 'last_update': self.last_update
             }
             out.update(self.json)
@@ -209,6 +229,8 @@ class Mtapi(object):
                 for stop_id, stop_data in self._stops.items():
                     if 'stop_name' in stop_data:
                         self._stop_id_to_name[stop_id] = stop_data['stop_name']
+                for station in self._stations.values():
+                    station.set_normal_routes(self._stops)
 
         except IOError as e:
             print('Couldn\'t load stops file '+ stops_file)

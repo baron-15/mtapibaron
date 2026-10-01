@@ -1,6 +1,7 @@
 import io
 import json
 import os
+from pathlib import Path
 import sys
 import tempfile
 import threading
@@ -59,6 +60,30 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(self.select(items, station(())), [])
         self.assertEqual(self.select(items, station(alltrains=[{'route': 'A', 'terminal': 'A27N'}])), [])
 
+    def test_normal_routes_keep_reroute_alerts_without_arrivals(self):
+        reroute = entity('ace-reroute', ['A', 'C', 'E'], **{
+            'header_text': translated('[A][C][E] trains are rerouted away from 34 St-Penn Station.'),
+            'transit_realtime.mercury_alert': {'alert_type': 'Planned - Reroute'}})
+        target = station((), stops={'A28': {}}, normalRoutes=['A', 'C', 'E'])
+        result = self.select([reroute, entity('unrelated', ['B'])], target)
+        self.assertEqual([a['id'] for a in result], ['ace-reroute'])
+        self.assertEqual(result[0]['routes'], ['A', 'C', 'E'])
+        self.assertEqual(target['alltrains'], [])
+
+    def test_normal_and_arriving_routes_are_combined(self):
+        target = station(('F',), normalRoutes=['A', 'C', 'E'])
+        items = [entity(route, [route]) for route in ('A', 'C', 'E', 'F', 'B')]
+        self.assertEqual([a['id'] for a in self.select(items, target)], ['A', 'C', 'E', 'F'])
+        target = station(alltrains=[{'route': 'A', 'terminal': 'A27N'}], normalRoutes=['A'])
+        self.assertEqual(self.select([entity('a', ['A'])], target)[0]['routes'], ['A'])
+
+    def test_normal_routes_still_respect_active_periods_and_normalization(self):
+        target = station((), normalRoutes=['6X', 'SIR'])
+        items = [entity('express', ['6']), entity('railway', ['SI']),
+                 entity('future', ['6'], active_period=[{'start': NOW + 1}]),
+                 entity('ended', ['6'], active_period=[{'end': NOW}])]
+        self.assertEqual([a['id'] for a in self.select(items, target)], ['express', 'railway'])
+
     def test_active_windows_and_advance_notices(self):
         items = [entity('current', ['A']),
                  entity('future', ['A'], active_period=[{'start': NOW + 1}]),
@@ -90,6 +115,32 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['type'], 'Boarding Change')
         self.assertEqual(result[0]['text'], 'Details')
+
+class StationRoutesTests(unittest.TestCase):
+    def setUp(self):
+        from mtapi.mtapi import Mtapi
+        root = Path(__file__).resolve().parents[1]
+        with patch.object(Mtapi, '_update'):
+            self.api = Mtapi('', root / 'data/stations.json', root / 'data/stationsv2.json',
+                             expires_seconds=0)
+
+    def test_normal_routes_survive_empty_arrivals_and_refresh(self):
+        with patch.object(self.api, '_load_mta_feed', return_value=False):
+            self.api._update()
+        penn = self.api.get_by_id(['A28'])[0]
+        self.assertEqual(penn['normalRoutes'], ['A', 'C', 'E'])
+        self.assertEqual(penn['routes'], set())
+        self.assertEqual(penn['alltrains'], [])
+        result = select_alerts({'entity': [entity('ace', ['A', 'C', 'E'])]}, penn, NOW)
+        self.assertEqual(result[0]['routes'], ['A', 'C', 'E'])
+
+    def test_station_complexes_and_shuttles_use_their_own_routes(self):
+        for stop, routes in (('A09', ['1', 'A', 'C']), ('901', ['4', '5', '6', '7', 'GS']),
+                             ('S01', ['C', 'FS']), ('D26', ['B', 'FS', 'Q']),
+                             ('H04', ['A', 'H']), ('S31', ['SI'])):
+            with self.subTest(stop=stop):
+                self.assertEqual(self.api.get_by_id([stop])[0]['normalRoutes'], routes)
+
 
 class CacheTests(unittest.TestCase):
     def setUp(self):
@@ -205,6 +256,19 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json['data'][0]['alltrains'])
         self.assertEqual(response.json['data'][0]['serviceAlerts']['status'], 'unavailable')
+
+    def test_empty_arrivals_still_embed_normal_route_alerts(self):
+        self.feed['entity'] = [entity('ace-reroute', ['A', 'C', 'E'])]
+        target = station((), stops={'A28': {}}, normalRoutes=['A', 'C', 'E'])
+        for method in ('get_by_id', 'get_by_route', 'get_by_point'):
+            getattr(self.main.mta, method).return_value = [target]
+        for url in ('/by-id/A28', '/by-route/A', '/by-location?lat=40&lon=-73'):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                penn = response.json['data'][0]
+                self.assertEqual(penn['alltrains'], [])
+                self.assertEqual(penn['serviceAlerts']['alerts'][0]['routes'], ['A', 'C', 'E'])
 
 if __name__ == '__main__':
     unittest.main()

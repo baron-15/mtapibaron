@@ -61,6 +61,8 @@ def select_alerts(feed, station, now):
     stops = {str(stop).rstrip('NS') for stop in station.get('stops', {})}
     routes = {normalize_route(train.get('route')) for train in station.get('alltrains', [])
               if isinstance(train, dict) and str(train.get('terminal', '')).rstrip('NS') not in stops}
+    # Reroutes and suspensions can remove every arrival from a normal stop.
+    routes.update(normalize_route(route) for route in station.get('normalRoutes', []))
     routes.discard('')
     if not routes:
         return []
